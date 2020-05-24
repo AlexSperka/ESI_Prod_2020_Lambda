@@ -9,6 +9,8 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "mysql": "^2.18.1"
+    "aws-sdk": "^2.683.0",
+    "json2csv": "^5.0.1",
+    "moment-timezone": "^0.5.31"
   }
 }
