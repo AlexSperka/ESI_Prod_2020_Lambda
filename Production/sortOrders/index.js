@@ -18,14 +18,14 @@
 const mysql = require('mysql2'); // require mysql
 var moment = require("moment-timezone");
 
-var AWS = require('aws-sdk');
+// var AWS = require('aws-sdk');
 
 /********************************* Variables **********************************/
 var date = 0;
 var time = 0;
 
-AWS.config.region = 'eu-central-1';
-var lambda = new AWS.Lambda();
+// AWS.config.region = 'eu-central-1';
+// var lambda = new AWS.Lambda();
 
 /********************************* SQL Connection *****************************/
 // If 'client' variable doesn't exist
@@ -58,15 +58,23 @@ exports.handler = (event, context, callback) => {
 
   context.callbackWaitsForEmptyEventLoop = false;
 
-  callDB(client, selectOrdersFromDB(), callback, context);
-  // asynchCallDB(client, writeOrdersToDB(newOrder, date, time));
+  callDB(client, selectOrdersFromDB(), callback);
 
 }
 
 /********************************* Database Call ******************************/
-const callDB = (client, queryMessage, callback, context) => {
+const callDB = (client, queryMessage, callback) => {
   client.query(queryMessage,
     function (error, results) {   /* https://stackoverflow.com/questions/35754766/nodejs-invoke-an-aws-lambda-function-from-within-another-lambda-function */
+
+      callback(null, {
+        statusCode: 200,
+        body: JSON.stringify({
+          data: 'Die Aufträge wurden erfolgreich sortiert!',
+          dataReturn: results
+        })
+      });
+
       var params = {
         FunctionName: 'esi_prod_createCSV', // the lambda function we are going to invoke
         InvocationType: 'RequestResponse',
@@ -81,14 +89,6 @@ const callDB = (client, queryMessage, callback, context) => {
           context.succeed('CreateCSV said ' + data.Payload);
         }
       })
-
-      callback(null, {
-        statusCode: 200,
-        body: JSON.stringify({
-          data: 'Die Aufträge wurden erfolgreich sortiert!',
-          dataReturn: results
-        })
-      });
     });
 };
 
@@ -114,6 +114,6 @@ const getOrdersFromDB = function () {
 
 /********************************* Helper Function GET STUFF FROM DB***********/
 const selectOrdersFromDB = function () {
-  var queryMessage = "SELECT * FROM  testdb.ProdTable WHERE prodStatus = " + 'open';
+  var queryMessage = "SELECT * FROM  testdb.ProdTable WHERE prodStatus =" + "'open'";
   return (queryMessage);
 };

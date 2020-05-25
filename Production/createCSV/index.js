@@ -28,7 +28,7 @@ exports.handler = async (event, context, callback) => {
         let dataCSV = JSON.stringify(event);
         dataCSV = JSON.parse(dataCSV);
 
-        const fields = ['ProdSortNum','prodOrderNum','articleNumber','colorHEX','quantity','hasPrint','motiveNumber'];
+        const fields = ['ProdSortNum','prodOrderNum','articleNumber','colorHEX','colorCyan','colorMagenta','colorYellow','colorKey','quantity','hasPrint','motiveNumber'];
         const opts = {fields};
         const csv = parse(dataCSV.results, opts);
 

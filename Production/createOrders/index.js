@@ -167,7 +167,7 @@ const getOrdersFromDB = function () {
 };
 
 const convertHEXtoCMYK = function(colorHEX) {
-  colorCMYK = convert.hex.cmyk(colorHEX);
+  var colorCMYK = convert.hex.cmyk(colorHEX);
 
   colorCyan = colorCMYK[0];
   colorMagenta = colorCMYK[1];
