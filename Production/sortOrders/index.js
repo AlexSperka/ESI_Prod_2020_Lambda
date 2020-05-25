@@ -17,6 +17,7 @@
 /********************************* Librarys ***********************************/
 const mysql = require('mysql2'); // require mysql
 var moment = require("moment-timezone");
+var DeltaE = require('delta-e');
 
 // var AWS = require('aws-sdk');
 
@@ -24,8 +25,8 @@ var moment = require("moment-timezone");
 var date = 0;
 var time = 0;
 
-// AWS.config.region = 'eu-central-1';
-// var lambda = new AWS.Lambda();
+AWS.config.region = 'eu-central-1';
+var lambda = new AWS.Lambda();
 
 /********************************* SQL Connection *****************************/
 // If 'client' variable doesn't exist
@@ -58,6 +59,8 @@ exports.handler = (event, context, callback) => {
 
   context.callbackWaitsForEmptyEventLoop = false;
 
+  compareColor();
+
   callDB(client, selectOrdersFromDB(), callback);
 
 }
@@ -67,28 +70,7 @@ const callDB = (client, queryMessage, callback) => {
   client.query(queryMessage,
     function (error, results) {   /* https://stackoverflow.com/questions/35754766/nodejs-invoke-an-aws-lambda-function-from-within-another-lambda-function */
 
-      callback(null, {
-        statusCode: 200,
-        body: JSON.stringify({
-          data: 'Die Aufträge wurden erfolgreich sortiert!',
-          dataReturn: results
-        })
-      });
-
-      var params = {
-        FunctionName: 'esi_prod_createCSV', // the lambda function we are going to invoke
-        InvocationType: 'RequestResponse',
-        LogType: 'Tail',
-        Payload: results
-      };
-
-      lambda.invoke(params, function (err, data) {
-        if (err) {
-          context.fail(err);
-        } else {
-          context.succeed('CreateCSV said ' + data.Payload);
-        }
-      })
+      callback(null, results);
     });
 };
 
@@ -117,3 +99,11 @@ const selectOrdersFromDB = function () {
   var queryMessage = "SELECT * FROM  testdb.ProdTable WHERE prodStatus =" + "'open'";
   return (queryMessage);
 };
+
+const compareColor = function () {
+  // Create two test LAB color objects to compare!
+  var color1 = { L: 36, A: 60, B: 41 };
+  var color2 = { L: 100, A: 40, B: 90 };
+  // 2000 formula
+  console.log(DeltaE.getDeltaE00(color1, color2));
+}
