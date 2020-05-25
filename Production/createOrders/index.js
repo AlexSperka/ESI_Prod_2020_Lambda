@@ -25,6 +25,8 @@
 const mysql = require('mysql2'); // require mysql
 var moment = require("moment-timezone");
 
+var convert = require('color-convert');
+
 /********************************* Variables **********************************/
 var date = 0;
 var time = 0;
@@ -39,6 +41,11 @@ var motiveNumber = 0;
 var prodSortNum = 0;
 var prodStatus = "\'" + 'open' + "\'";
 var splitOrders = "\'" + 'False' + "\'";
+
+var colorCyan = 0;
+var colorMagenta = 0;
+var colorYellow = 0;
+var colorKey = 0;
 
 /********************************* SQL Connection *****************************/
 // If 'client' variable doesn't exist
@@ -69,6 +76,8 @@ exports.handler = (event, context, callback) => {
   // console.log('Color Name: ', newOrder.body.colorName);
 
   context.callbackWaitsForEmptyEventLoop = false;
+
+  convertHEXtoCMYK(newOrder.body.color);
 
   callDB(client, writeOrdersToDB(newOrder, date, time), callback);
   // asynchCallDB(client, writeOrdersToDB(newOrder, date, time));
@@ -134,7 +143,7 @@ const writeOrdersToDB = function (newOrder, date, time) {
 
   // This will allow us to freeze open connections to a database
 
-  let newOrderString = "INSERT INTO testdb.ProdTable values(" + date + "," + time + "," + endDate + "," + productionOrderNumber + "," + articleNumber + "," + color + "," + colorName + "," + quantity + "," + hasPrint + "," + motiveNumber + "," + prodSortNum + "," + prodStatus + "," + splitOrders + ")";
+  let newOrderString = "INSERT INTO testdb.ProdTable values(" + date + "," + time + "," + endDate + "," + productionOrderNumber + "," + articleNumber + "," + color + "," + colorName + "," + quantity + "," + hasPrint + "," + motiveNumber + "," + prodSortNum + "," + prodStatus + "," + splitOrders  + "," + colorCyan  + "," + colorMagenta  + "," + colorYellow  + "," + colorKey + ")";
   console.log(newOrderString);
   return (newOrderString);
 };
@@ -155,4 +164,13 @@ const createDatabaseSQL = function () {
 const getOrdersFromDB = function () {
   var queryMessage = 'SELECT * FROM testdb.ProdTable LIMIT 10';
   return (queryMessage);
+};
+
+const convertHEXtoCMYK = function(colorHEX) {
+  colorCMYK = convert.hex.cmyk(colorHEX);
+
+  colorCyan = colorCMYK[0];
+  colorMagenta = colorCMYK[1];
+  colorYellow = colorCMYK[2];
+  colorKey = colorCMYK[3];
 };
