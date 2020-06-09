@@ -16,6 +16,8 @@
 
 /********************************* Librarys ***********************************/
 const mysql = require('mysql2'); // require mysql
+const axios = require('axios');
+
 var moment = require("moment-timezone");
 var DeltaE = require('delta-e');
 
@@ -25,8 +27,7 @@ var DeltaE = require('delta-e');
 var date = 0;
 var time = 0;
 
-AWS.config.region = 'eu-central-1';
-var lambda = new AWS.Lambda();
+var url = 0;
 
 /********************************* SQL Connection *****************************/
 // If 'client' variable doesn't exist
@@ -59,34 +60,47 @@ exports.handler = (event, context, callback) => {
 
   context.callbackWaitsForEmptyEventLoop = false;
 
-  compareColor();
+  //  compareColor();
 
   callDB(client, selectOrdersFromDB(), callback);
-
+  console.log("test return");
 }
-
-/********************************* Database Call ******************************/
-const callDB = (client, queryMessage, callback) => {
-  client.query(queryMessage,
-    function (error, results) {   /* https://stackoverflow.com/questions/35754766/nodejs-invoke-an-aws-lambda-function-from-within-another-lambda-function */
-
-      callback(null, results);
-    });
-};
 
 // /********************************* Database Call ******************************/
 // const callDB = (client, queryMessage, callback) => {
-//     client.query(queryMessage,
-//       function (error, results) {
-//         callback(null, {
-//           statusCode: 200,
-//           body: JSON.stringify({
-//             data: 'Die Aufträge wurden erfolgreich sortiert!',
-//             dataReturn: results
-//           })
-//         });
-//       });
-//   };
+//   client.query(queryMessage,
+//     function (error, results) {   /* https://stackoverflow.com/questions/35754766/nodejs-invoke-an-aws-lambda-function-from-within-another-lambda-function */
+
+//       //callCreateCSV(results);
+//       console.log("Query fineshed");
+//       callback(null, results);
+
+//     });
+// };
+
+/********************************* Database Call ******************************/
+const callDB = (client, queryMessage, callback) => {
+
+  var queryResult = 0;
+
+  client.promise().query(queryMessage)
+    .then(
+      (results) => {
+        queryResult = results[0];
+        return queryResult; /* https://developer.mozilla.org/de/docs/Web/JavaScript/Guide/Using_promises   */
+        //callback(null, results[0]);
+        //console.log(results);
+      })
+    .then(
+      (results) => {
+        //queryResult = results[0];
+        callCreateCSV(queryResult, callback);
+        console.log("Call CreateCSV")
+      })
+    .catch(console.log)
+    .then(() => client.end());
+
+};
 
 /********************************* Helper Function GET STUFF FROM DB***********/
 const getOrdersFromDB = function () {
@@ -102,8 +116,31 @@ const selectOrdersFromDB = function () {
 
 const compareColor = function () {
   // Create two test LAB color objects to compare!
-  var color1 = { L: 36, A: 60, B: 41 };
+  var color1 = { L: 0, A: 0, B: 0 };
   var color2 = { L: 100, A: 40, B: 90 };
   // 2000 formula
   console.log(DeltaE.getDeltaE00(color1, color2));
+  DeltaE.getDeltaE00()
+}
+
+const callCreateCSV = function (data, callback) {
+  let parsed;
+
+  var responseCreateCSV = 0;
+  console.log("Called response Create CSV");
+
+  axios.post('https://2pkivl4tnh.execute-api.eu-central-1.amazonaws.com/prod/createCSV', data)
+    .then((res) => {
+
+      console.log("Res.data = " + res.data.body)
+      //data = JSON.stringify(res.data)
+      data = JSON.parse(res.data.body)
+      //url = data.url
+      console.log("URL: "+data.url)
+      callback(null, data)
+
+    })
+    .catch((error) => {
+      console.error(error)
+    })
 }

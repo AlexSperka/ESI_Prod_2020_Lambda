@@ -2,6 +2,12 @@
 	"folders": [
 		{
 			"path": "."
+		},
+		{
+			"path": "..\\..\\..\\..\\Github\\ESI\\esi__FE_verkaufversand"
+		},
+		{
+			"path": "..\\..\\..\\..\\Desktop\\ESI\\React\\ESI_Prod_20200509\\esi_2020"
 		}
 	]
 }
