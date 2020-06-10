@@ -26,6 +26,7 @@ const mysql = require('mysql2'); // require mysql
 var moment = require("moment-timezone");
 
 var convert = require('color-convert');
+var DeltaE = require('delta-e');
 
 /********************************* Variables **********************************/
 var date = 0;
@@ -46,6 +47,8 @@ var colorCyan = 0;
 var colorMagenta = 0;
 var colorYellow = 0;
 var colorKey = 0;
+
+var deltaE = 0;
 
 /********************************* SQL Connection *****************************/
 // If 'client' variable doesn't exist
@@ -79,8 +82,12 @@ exports.handler = (event, context, callback) => {
 
   convertHEXtoCMYK(newOrder.body.color);
 
-  callDB(client, writeOrdersToDB(newOrder, date, time), callback);
+  compareColor(newOrder.body.color);
+
+  callDB(client, deleteNullRowSQL(), callback);
   // asynchCallDB(client, writeOrdersToDB(newOrder, date, time));
+  
+  return productionOrderNumber;
 };
 
 /********************************* Database Call ******************************/
@@ -132,7 +139,7 @@ const asynchCallDB = async (connection, queryMessage) => {
 /********************************* Creating Order String for SQL***************/
 const writeOrdersToDB = function (newOrder, date, time) {
   endDate = "\'" + newOrder.body.endDate + "\'"; //Promised date to customer
-  productionOrderNumber = "\'" + newOrder.body.productionOrderNumber + "\'";
+  productionOrderNumber = "\'" + newOrder.body.orderNumber + "-" + newOrder.body.lineItem + "\'";
   articleNumber = +newOrder.body.articleNumber;
   color = "\'" + newOrder.body.color + "\'";
   colorName = "\'" + newOrder.body.colorName + "\'";
@@ -143,7 +150,7 @@ const writeOrdersToDB = function (newOrder, date, time) {
 
   // This will allow us to freeze open connections to a database
 
-  let newOrderString = "INSERT INTO testdb.ProdTable values(" + date + "," + time + "," + endDate + "," + productionOrderNumber + "," + articleNumber + "," + color + "," + colorName + "," + quantity + "," + hasPrint + "," + motiveNumber + "," + prodSortNum + "," + prodStatus + "," + splitOrders  + "," + colorCyan  + "," + colorMagenta  + "," + colorYellow  + "," + colorKey + ")";
+  let newOrderString = "INSERT INTO testdb.ProdTable values(" + date + "," + time + "," + endDate + "," + productionOrderNumber + "," + articleNumber + "," + color + "," + colorName + "," + quantity + "," + hasPrint + "," + motiveNumber + "," + prodSortNum + "," + prodStatus + "," + splitOrders  + "," + colorCyan  + "," + colorMagenta  + "," + colorYellow  + "," + colorKey + "," + deltaE + ")";
   console.log(newOrderString);
   return (newOrderString);
 };
@@ -160,11 +167,23 @@ const createDatabaseSQL = function () {
   return (queryMessage);
 };
 
+/********************************* ADD ROW TO DB *************/
+const addRowSQL = function () {
+  var queryMessage = 'ALTER TABLE testdb.ProdTable ADD deltaE FLOAT; ';
+  return (queryMessage);
+};
+
 /********************************* Helper Function GET STUFF FROM DB***********/
 const getOrdersFromDB = function () {
   var queryMessage = 'SELECT * FROM testdb.ProdTable LIMIT 10';
   return (queryMessage);
 };
+
+/********************************* Helper Function DELETE STUFF FROM DB***********/
+const deleteNullRowSQL = function() {
+  var queryMessage = 'DELETE FROM testdb.ProdTable WHERE deltaE IS NULL';
+  return (queryMessage);
+}
 
 const convertHEXtoCMYK = function(colorHEX) {
   var colorCMYK = convert.hex.cmyk(colorHEX);
@@ -174,3 +193,18 @@ const convertHEXtoCMYK = function(colorHEX) {
   colorYellow = colorCMYK[2];
   colorKey = colorCMYK[3];
 };
+
+/********************************* Compare Color ***********/
+const compareColor = function (colorHex) {
+  // Create two test LAB color objects to compare!
+  var colorWhite = { L: 0, A: 0, B: 0 };
+  
+  var colorOrder = convert.hex.lab(colorHex);
+  colorOrder = {L: colorOrder[0], A: colorOrder[1], B: colorOrder[2]};
+  //colorOrder = {L: colorHex[0], A: colorHex[1], B: colorHex[2]};
+  console.log(convert.hex.lab(colorHex));
+  //var colorOrder = convert.hex.lab(colorHex);
+  // 2000 formula
+  console.log("Delta E Difference: "+DeltaE.getDeltaE00(colorWhite, colorOrder));
+  deltaE = DeltaE.getDeltaE00(colorWhite, colorOrder);
+}

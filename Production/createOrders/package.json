@@ -9,8 +9,9 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "color-convert": "^2.0.1",
+    "delta-e": "0.0.7",
     "moment-timezone": "^0.5.31",
-    "mysql2": "^2.1.0",
-    "color-convert": "^2.0.1"
+    "mysql2": "^2.1.0"
   }
 }

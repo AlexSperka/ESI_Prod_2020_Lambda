@@ -15,7 +15,7 @@
  */
 
 /********************************* Librarys ***********************************/
-const mysql = require('mysql2'); // require mysql
+const mysql = require('mysql2'); /* require mysql - https://npmdoc.github.io/node-npmdoc-mysql2/build/apidoc.html#apidoc.module.mysql2.promise */
 const axios = require('axios');
 
 var moment = require("moment-timezone");
@@ -86,7 +86,8 @@ const callDB = (client, queryMessage, callback) => {
   client.promise().query(queryMessage)
     .then(
       (results) => {
-        queryResult = results[0];
+        queryResult = JSON.stringify(results[0]);
+        console.log(JSON.stringify(results[0]))
         return queryResult; /* https://developer.mozilla.org/de/docs/Web/JavaScript/Guide/Using_promises   */
         //callback(null, results[0]);
         //console.log(results);
@@ -94,7 +95,7 @@ const callDB = (client, queryMessage, callback) => {
     .then(
       (results) => {
         //queryResult = results[0];
-        callCreateCSV(queryResult, callback);
+        callCreateCSV(results, callback);
         console.log("Call CreateCSV")
       })
     .catch(console.log)

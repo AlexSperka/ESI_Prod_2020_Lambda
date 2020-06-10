@@ -20,8 +20,8 @@ exports.handler = async (event, context, callback) => {
 
     console.log(event);
     // var date = moment();
-    var time = moment().format('_HH-mm');  //get UTC Time
-    var date = moment().format('DD.MM.YYYY');
+    var time = moment().format('_HH-mm-ss');  //get UTC Time
+    var date = moment().format('YYYY.MM.DD');
     console.log("date & time UTC: " + time + " and " + date);
 
     try {
@@ -30,7 +30,8 @@ exports.handler = async (event, context, callback) => {
 
         const fields = ['ProdSortNum','prodOrderNum','articleNumber','colorHEX','colorCyan','colorMagenta','colorYellow','colorKey','quantity','hasPrint','motiveNumber'];
         const opts = {fields};
-        const csv = parse(dataCSV.results, opts);
+        const csv = parse(dataCSV, opts);
+//        const csv = parse(dataCSV.results, opts);
 
         dstKey = qualityCSV+date+time+'.csv';
 
