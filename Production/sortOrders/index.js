@@ -15,13 +15,15 @@
 const mysql = require('mysql2'); /* require mysql - https://npmdoc.github.io/node-npmdoc-mysql2/build/apidoc.html#apidoc.module.mysql2.promise */
 const axios = require('axios');
 
-var moment = require("moment-timezone");
+const moment = require("moment-timezone");
 
 /********************************* Variables **********************************/
 var date = 0;
 var time = 0;
 var dataDB = 0;
 var url = 0;
+
+const ORDERLIMIT = 3; /** Define how many orders shall be in one CSV file */
 
 /********************************* SQL Connection *****************************/
 // If 'client' variable doesn't exist
@@ -61,7 +63,7 @@ exports.handler = async (event, context, callback) => {
 
     client.close();
 
-    return {"url" : url};
+    return { "url": url };
     //return { "url": data };
 
   } catch (error) {
@@ -80,13 +82,22 @@ async function callDB(client, queryMessage) {
     .then(
       (results) => {
         queryResult = JSON.stringify(results[0]);
-        console.log(JSON.stringify(results[0]))
+        //console.log(JSON.stringify(results[0]))
         dataDB = queryResult;
         return queryResult; /* https://developer.mozilla.org/de/docs/Web/JavaScript/Guide/Using_promises   */
         //callback(null, results[0]);
         //console.log(results);
       })
     .catch(console.log)
+
+  await client.promise().query(updateProdStatus())
+    .then(
+      (results) => {
+        console.log("Update Production Status" + results)
+        return results;
+      })
+    .catch(console.log)
+
 };
 
 /********************************* Call Lambda function CreateCSV ******************************/
@@ -96,7 +107,7 @@ async function callCreateCSV(data) {
   var responseCreateCSV = 0;
   console.log("Called response Create CSV");
 
-  await axios.post('https://2pkivl4tnh.execute-api.eu-central-1.amazonaws.com/prod/createCSV', dataDB)
+  await axios.post('https://2pkivl4tnh.execute-api.eu-central-1.amazonaws.com/prod/createCSV', data)
     .then((res) => {
 
       console.log("Res.data = " + res.data.body);
@@ -113,6 +124,29 @@ async function callCreateCSV(data) {
 
 /********************************* Helper Function GET STUFF FROM DB***********/
 const selectOrdersFromDB = function () {
-  var queryMessage = "SELECT * FROM  testdb.ProdTable WHERE prodStatus =" + "'open'" + "ORDER BY deltaE"+" LIMIT 10";
+  var queryMessage = "SELECT * FROM  testdb.ProdTable WHERE prodStatus =" + "'open'" + "ORDER BY endDate, deltaE" + " LIMIT " + ORDERLIMIT;
   return (queryMessage);
 };
+
+/********************************* Update Production Status in DB***********/
+const updateProdStatus = function () {
+  //console.log(dataDB)
+  dataDB = JSON.parse(dataDB)
+  var queryMessageNum = ' ';
+
+  for (var i = 0; i < dataDB.length; i++) {
+    var obj = dataDB[i];
+    if (i < dataDB.length - 1) {
+      queryMessageNum += "'" + obj.prodOrderNum + "'" + " , ";
+      //console.log(obj.prodOrderNum);
+    } else {
+      queryMessageNum += "'" + obj.prodOrderNum + "'";
+    }
+  }
+
+  var queryMessage = " UPDATE testdb.ProdTable SET prodStatus = 'planned' WHERE prodOrderNum IN (" + queryMessageNum + " );";
+  console.log("String updateProdStatus: " + queryMessage)
+
+  return (queryMessage);
+
+}
