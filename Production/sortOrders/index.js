@@ -1,17 +1,14 @@
 /**
- * Function to add new Orders to production table
+ * Function to get Orders from production table and sort them by color (light to dark), shipping date and production status
  * 
  * @alias    esi_prod_sortOrders
  * @memberof ProductionTeamESI
  *
  * @fires   esi_prod_callCSV
- * @fires   className#eventName
- * @listens event:eventName
- * @listens className~event:eventName
  *
- * @param none
+ * @param none, TBD later
  *
- * @return {String} Return value description.
+ * @return {String} Return URL where CSV file with next orders can be downloaded
  */
 
 /********************************* Librarys ***********************************/
@@ -19,14 +16,11 @@ const mysql = require('mysql2'); /* require mysql - https://npmdoc.github.io/nod
 const axios = require('axios');
 
 var moment = require("moment-timezone");
-var DeltaE = require('delta-e');
-
-// var AWS = require('aws-sdk');
 
 /********************************* Variables **********************************/
 var date = 0;
 var time = 0;
-
+var dataDB = 0;
 var url = 0;
 
 /********************************* SQL Connection *****************************/
@@ -46,7 +40,7 @@ if (typeof client === 'undefined') {
 
 /******************************************************************************/
 /********************************* Export Handler *****************************/
-exports.handler = (event, context, callback) => {
+exports.handler = async (event, context, callback) => {
 
   // var date = moment();
   time = "\'" + moment().format('HH:mm:ss') + "\'";  //get UTC Time
@@ -54,94 +48,71 @@ exports.handler = (event, context, callback) => {
   console.log("date & time UTC: " + time + " and " + date);
 
   console.log('Received event:', JSON.stringify(event, null, 2));
-  let newOrder = JSON.stringify(event);
-  newOrder = JSON.parse(newOrder);
-  // console.log('Color Name: ', newOrder.body.colorName);
+  let data = JSON.stringify(event);
+  data = JSON.parse(data);  /** Unused right now, for later POST implementations when handing over parameters */
 
   context.callbackWaitsForEmptyEventLoop = false;
 
-  //  compareColor();
+  try {
 
-  callDB(client, selectOrdersFromDB(), callback);
-  console.log("test return");
+    await callDB(client, selectOrdersFromDB()); /** Get 10 entries ordered by date, delta e and prod status */
+
+    await callCreateCSV(dataDB);
+
+    client.close();
+
+    return {"url" : url};
+    //return { "url": data };
+
+  } catch (error) {
+    console.log(error);
+    return { "url": "That did not work" };
+  }
+
 }
 
-// /********************************* Database Call ******************************/
-// const callDB = (client, queryMessage, callback) => {
-//   client.query(queryMessage,
-//     function (error, results) {   /* https://stackoverflow.com/questions/35754766/nodejs-invoke-an-aws-lambda-function-from-within-another-lambda-function */
-
-//       //callCreateCSV(results);
-//       console.log("Query fineshed");
-//       callback(null, results);
-
-//     });
-// };
-
 /********************************* Database Call ******************************/
-const callDB = (client, queryMessage, callback) => {
+async function callDB(client, queryMessage) {
 
   var queryResult = 0;
 
-  client.promise().query(queryMessage)
+  await client.promise().query(queryMessage)
     .then(
       (results) => {
         queryResult = JSON.stringify(results[0]);
         console.log(JSON.stringify(results[0]))
+        dataDB = queryResult;
         return queryResult; /* https://developer.mozilla.org/de/docs/Web/JavaScript/Guide/Using_promises   */
         //callback(null, results[0]);
         //console.log(results);
       })
-    .then(
-      (results) => {
-        //queryResult = results[0];
-        callCreateCSV(results, callback);
-        console.log("Call CreateCSV")
-      })
     .catch(console.log)
-    .then(() => client.end());
-
 };
 
-/********************************* Helper Function GET STUFF FROM DB***********/
-const getOrdersFromDB = function () {
-  var queryMessage = 'SELECT * FROM testdb.ProdTable LIMIT 10';
-  return (queryMessage);
-};
-
-/********************************* Helper Function GET STUFF FROM DB***********/
-const selectOrdersFromDB = function () {
-  var queryMessage = "SELECT * FROM  testdb.ProdTable WHERE prodStatus =" + "'open'" + "ORDER BY deltaE";
-  return (queryMessage);
-};
-
-const compareColor = function () {
-  // Create two test LAB color objects to compare!
-  var color1 = { L: 0, A: 0, B: 0 };
-  var color2 = { L: 100, A: 40, B: 90 };
-  // 2000 formula
-  console.log(DeltaE.getDeltaE00(color1, color2));
-  DeltaE.getDeltaE00()
-}
-
-const callCreateCSV = function (data, callback) {
+/********************************* Call Lambda function CreateCSV ******************************/
+async function callCreateCSV(data) {
   let parsed;
 
   var responseCreateCSV = 0;
   console.log("Called response Create CSV");
 
-  axios.post('https://2pkivl4tnh.execute-api.eu-central-1.amazonaws.com/prod/createCSV', data)
+  await axios.post('https://2pkivl4tnh.execute-api.eu-central-1.amazonaws.com/prod/createCSV', dataDB)
     .then((res) => {
 
-      console.log("Res.data = " + res.data.body)
+      console.log("Res.data = " + res.data.body);
       //data = JSON.stringify(res.data)
-      data = JSON.parse(res.data.body)
-      //url = data.url
-      console.log("URL: "+data.url)
-      callback(null, data)
-
+      data = JSON.parse(res.data.body);
+      url = data.url
+      console.log("URL: " + data.url);
+      return data.url;
     })
     .catch((error) => {
       console.error(error)
     })
 }
+
+/********************************* Helper Function GET STUFF FROM DB***********/
+const selectOrdersFromDB = function () {
+  var queryMessage = "SELECT * FROM  testdb.ProdTable WHERE prodStatus =" + "'open'" + "ORDER BY deltaE"+" LIMIT 10";
+  return (queryMessage);
+};
