@@ -111,7 +111,7 @@ const getOrdersFromDB = function () {
 
 /********************************* Helper Function GET STUFF FROM DB***********/
 const selectOrdersFromDB = function () {
-  var queryMessage = "SELECT * FROM  testdb.ProdTable WHERE prodStatus =" + "'open'";
+  var queryMessage = "SELECT * FROM  testdb.ProdTable WHERE prodStatus =" + "'open'" + "ORDER BY deltaE";
   return (queryMessage);
 };
 

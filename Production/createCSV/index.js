@@ -11,7 +11,8 @@ const s3 = new AWS.S3();
 var output = 'Default';
 var myBody = Buffer.from(output);
 
-var dstBucket = 'esi-prod-bucket';
+var dstBucketOrders = 'esi-prod-bucket';
+var dstBucketQualityValues = 'esi-prod-bucket-qualityvalues';
 
 var qualityCSV = 'qualityValues-';
 var dstKey = 'Default.csv';
@@ -35,8 +36,14 @@ exports.handler = async (event, context, callback) => {
 
         dstKey = qualityCSV+date+time+'.csv';
 
+        if(dataCSV.type == "qualityvalues"){
+            dstBucketOrders=dstBucketQualityValues;
+            console.log("Bucket: "+ dstBucketOrders);
+            const fields = ['Material','Lieferdatum','Viskiosität','ppml','DeltaE','Saugfähigkeit','Weißgrad'];
+        } 
+
         const destparams = {
-            Bucket: dstBucket,
+            Bucket: dstBucketOrders,
             Key: dstKey,
             // Body: myBody,
             Body: Buffer.from(csv),

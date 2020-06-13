@@ -84,7 +84,7 @@ exports.handler = (event, context, callback) => {
 
   compareColor(newOrder.body.color);
 
-  callDB(client, deleteNullRowSQL(), callback);
+  callDB(client, writeOrdersToDB(newOrder, date, time), callback);
   // asynchCallDB(client, writeOrdersToDB(newOrder, date, time));
   
   return productionOrderNumber;
@@ -181,7 +181,7 @@ const getOrdersFromDB = function () {
 
 /********************************* Helper Function DELETE STUFF FROM DB***********/
 const deleteNullRowSQL = function() {
-  var queryMessage = 'DELETE FROM testdb.ProdTable WHERE deltaE IS NULL';
+  var queryMessage = "DELETE FROM testdb.ProdTable WHERE prodOrderNum = 'undefined'";
   return (queryMessage);
 }
 
@@ -197,7 +197,7 @@ const convertHEXtoCMYK = function(colorHEX) {
 /********************************* Compare Color ***********/
 const compareColor = function (colorHex) {
   // Create two test LAB color objects to compare!
-  var colorWhite = { L: 0, A: 0, B: 0 };
+  var colorWhite = { L: 100, A: 0, B: 0 };
   
   var colorOrder = convert.hex.lab(colorHex);
   colorOrder = {L: colorOrder[0], A: colorOrder[1], B: colorOrder[2]};
