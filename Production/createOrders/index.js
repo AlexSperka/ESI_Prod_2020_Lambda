@@ -8,7 +8,8 @@
  * {
       "body": {
         "endDate": "25.05.2020",
-        "productionOrderNumber": "C-20170327-90125-1",
+        "orderNumber": "C-20170327-90125",
+        "lineItem": 1,
         "articleNumber": "10000001",
         "color": "#79B6FF",
         "colorName": "Himmelblau",
@@ -27,6 +28,8 @@ var moment = require("moment-timezone");
 
 var convert = require('color-convert');
 var DeltaE = require('delta-e');
+
+var tools = require('./tools'); /**  helper functions regarding SQL calls (SELECT, ALTER, ADD, DELETE, ...) */
 
 /********************************* Variables **********************************/
 var date = 0;
@@ -49,7 +52,7 @@ var colorYellow = 0;
 var colorKey = 0;
 
 var deltaE = 0;
-var maxProdSortNum = 0;
+var maxProdSortNum = null;
 
 /********************************* SQL Connection *****************************/
 // If 'client' variable doesn't exist
@@ -65,11 +68,11 @@ if (typeof client === 'undefined') {
 
   client.connect();
 }
+
 /******************************************************************************/
 /********************************* Export Handler *****************************/
 exports.handler = async (event, context, callback) => {
 
-  // var date = moment();
   time = "\'" + moment().format('HH:mm:ss') + "\'";  //get UTC Time
   date = "\'" + moment().format('DD.MM.YYYY') + "\'";
   console.log("date & time UTC: " + time + " and " + date);
@@ -77,32 +80,34 @@ exports.handler = async (event, context, callback) => {
   console.log('Received event:', JSON.stringify(event, null, 2));
   let newOrder = JSON.stringify(event);
   newOrder = JSON.parse(newOrder);
-  // console.log('Color Name: ', newOrder.body.colorName);
 
   context.callbackWaitsForEmptyEventLoop = false;
 
-  convertHEXtoCMYK(newOrder.body.color);
+  try {
+    convertHEXtoCMYK(newOrder.body.color);
+    compareColor(newOrder.body.color);
 
-  await getMaxValue(client)
-  compareColor(newOrder.body.color);
+    await getMaxValue(client)
 
-  await callDB(client, writeOrdersToDB(newOrder, date, time), callback);
+    await callDB(client, writeOrdersToDB(newOrder, date, time));
 
-  return productionOrderNumber;
+    client.close();
+
+    return {"prodOrderNum" : productionOrderNumber};
+
+  } catch (error) {
+    console.log(error);
+    return {"prodOrderNum" : "That did not work"};
+  }
 };
 
-/********************************* Database Call ******************************/
-async function callDB (client, queryMessage, callback) {
+/********************************* Generic Database Call ******************************/
+async function callDB(client, queryMessage) {
   await client.promise().query(queryMessage)
     .then(
       (results) => {
-        callback(null, {
-          statusCode: 200,
-          body: JSON.stringify({
-            data: 'Neue Aufträge wurden erfolgreich zur Datenbank hinzugefügt!',
-            dataReturn: results
-          })
-        });f
+        console.log("Database response:")
+        console.log(results)
       })
     .catch(console.log)
 };
@@ -143,36 +148,7 @@ const writeOrdersToDB = function (newOrder, date, time) {
   return (newOrderString);
 };
 
-/********************************* Helper Function CREATE TABLE ***************/
-const createTableSQL = function () {
-  var queryMessage = 'CREATE TABLE ProdTable (date DATE, time TIME, endDate DATE, prodOrderNum VARCHAR(255), articleNumber INT, colorHEX VARCHAR(255), colorName VARCHAR(255), quantity INT, hasPrint TINYINT(1), motiveNumber INT, ProdSortNum INT, c TINYINT, m TINYINT, y TINYINT, k TINYINT, prodStatus VARCHAR(30), splitOrders VARCHAR(255) )';
-  return (queryMessage);
-};
-
-/********************************* Helper Function CREATE DATABASE*************/
-const createDatabaseSQL = function () {
-  var queryMessage = 'CREATE DATABASE testdb';
-  return (queryMessage);
-};
-
-/********************************* ADD ROW TO DB *************/
-const addRowSQL = function () {
-  var queryMessage = 'ALTER TABLE testdb.ProdTable ADD deltaE FLOAT; ';
-  return (queryMessage);
-};
-
-/********************************* Helper Function GET STUFF FROM DB***********/
-const getOrdersFromDB = function () {
-  var queryMessage = 'SELECT * FROM testdb.ProdTable LIMIT 10';
-  return (queryMessage);
-};
-
-/********************************* Helper Function DELETE STUFF FROM DB***********/
-const deleteNullRowSQL = function () {
-  var queryMessage = "DELETE FROM testdb.ProdTable WHERE prodOrderNum = 'undefined'";
-  return (queryMessage);
-}
-
+/********************************* Convert Hex to CMYK ***************************/
 const convertHEXtoCMYK = function (colorHEX) {
   var colorCMYK = convert.hex.cmyk(colorHEX);
 
@@ -182,7 +158,7 @@ const convertHEXtoCMYK = function (colorHEX) {
   colorKey = colorCMYK[3];
 };
 
-/********************************* Compare Color ***********/
+/********************************* Compare Color and calculate Delta E ***********/
 const compareColor = function (colorHex) {
   // Create two test LAB color objects to compare!
   var colorWhite = { L: 100, A: 0, B: 0 };
@@ -193,6 +169,6 @@ const compareColor = function (colorHex) {
   console.log(convert.hex.lab(colorHex));
   //var colorOrder = convert.hex.lab(colorHex);
   // 2000 formula
-  console.log("Delta E Difference: " + DeltaE.getDeltaE00(colorWhite, colorOrder));
+  console.log("Delta E Difference: " + DeltaE.getDeltaE00(colorWhite, colorOrder)); /** Compared color to https://www.easyrgb.com/en/convert.php#inputFORM */
   deltaE = DeltaE.getDeltaE00(colorWhite, colorOrder);
 }
