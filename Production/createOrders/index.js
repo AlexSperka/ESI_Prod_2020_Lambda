@@ -49,6 +49,7 @@ var colorYellow = 0;
 var colorKey = 0;
 
 var deltaE = 0;
+var maxProdSortNum = 0;
 
 /********************************* SQL Connection *****************************/
 // If 'client' variable doesn't exist
@@ -66,7 +67,7 @@ if (typeof client === 'undefined') {
 }
 /******************************************************************************/
 /********************************* Export Handler *****************************/
-exports.handler = (event, context, callback) => {
+exports.handler = async (event, context, callback) => {
 
   // var date = moment();
   time = "\'" + moment().format('HH:mm:ss') + "\'";  //get UTC Time
@@ -82,58 +83,44 @@ exports.handler = (event, context, callback) => {
 
   convertHEXtoCMYK(newOrder.body.color);
 
+  await getMaxValue(client)
   compareColor(newOrder.body.color);
 
-  callDB(client, writeOrdersToDB(newOrder, date, time), callback);
-  // asynchCallDB(client, writeOrdersToDB(newOrder, date, time));
-  
+  await callDB(client, writeOrdersToDB(newOrder, date, time), callback);
+
   return productionOrderNumber;
 };
 
 /********************************* Database Call ******************************/
-const callDB = (client, queryMessage, callback) => {
-  client.query(queryMessage,
-    function (error, results) {
-      callback(null, {
-        statusCode: 200,
-        body: JSON.stringify({
-          data: 'Neue Aufträge wurden erfolgreich zur Datenbank hinzugefügt!',
-          dataReturn: results
-        })
-      });
-    });
+async function callDB (client, queryMessage, callback) {
+  await client.promise().query(queryMessage)
+    .then(
+      (results) => {
+        callback(null, {
+          statusCode: 200,
+          body: JSON.stringify({
+            data: 'Neue Aufträge wurden erfolgreich zur Datenbank hinzugefügt!',
+            dataReturn: results
+          })
+        });f
+      })
+    .catch(console.log)
 };
 
-/********************************* Asynch Database Call ***********************/
+/********************************* Database Call Max Value ******************************/
+async function getMaxValue(client) {
+  var queryMessage = "SELECT MAX(ProdSortNum) AS 'ProdSortNum' FROM testdb.ProdTable";
+  await client.promise().query(queryMessage)
+    .then(results => {
+      console.log(results[0]);
+      var data = results[0];
+      data = data[0];
+      data = JSON.stringify(data.ProdSortNum);
+      console.log("Max Prod Num = " + data);
 
-/*  Timeout right now, not working   */
-const asynchCallDB = async (connection, queryMessage) => {
-  try {
-      const data = await new Promise((resolve, reject) => {
-          connection.connect(function (err) {
-              if (err) {
-                  reject(err);
-              }
-              connection.query(queryMessage,
-                  function (err, result) {
-                      if (err) {
-                          console.log("Error->" + err);
-                          reject(err);
-                      }
-                      resolve(result);
-                  });
-          });
-      });
-      return {
-          statusCode: 200,
-          body: JSON.stringify(data)
-      };
-  } catch (err) {
-      return {
-          statusCode: 400,
-          body: err.message
-      };
-  }
+      maxProdSortNum = parseInt(data, 10);
+    })
+    .catch(console.log)
 };
 
 /********************************* Creating Order String for SQL***************/
@@ -148,9 +135,10 @@ const writeOrdersToDB = function (newOrder, date, time) {
   hasPrint = (newOrder.body.hasPrint != 'False') ? 1 : 0; //if hasPrint true then 1 otherwise 0
   motiveNumber = newOrder.body.motiveNumber;
 
+  prodSortNum = maxProdSortNum + 1;
   // This will allow us to freeze open connections to a database
 
-  let newOrderString = "INSERT INTO testdb.ProdTable values(" + date + "," + time + "," + endDate + "," + productionOrderNumber + "," + articleNumber + "," + color + "," + colorName + "," + quantity + "," + hasPrint + "," + motiveNumber + "," + prodSortNum + "," + prodStatus + "," + splitOrders  + "," + colorCyan  + "," + colorMagenta  + "," + colorYellow  + "," + colorKey + "," + deltaE + ")";
+  let newOrderString = "INSERT INTO testdb.ProdTable values(" + date + "," + time + "," + endDate + "," + productionOrderNumber + "," + articleNumber + "," + color + "," + colorName + "," + quantity + "," + hasPrint + "," + motiveNumber + "," + prodSortNum + "," + prodStatus + "," + splitOrders + "," + colorCyan + "," + colorMagenta + "," + colorYellow + "," + colorKey + "," + deltaE + ")";
   console.log(newOrderString);
   return (newOrderString);
 };
@@ -180,12 +168,12 @@ const getOrdersFromDB = function () {
 };
 
 /********************************* Helper Function DELETE STUFF FROM DB***********/
-const deleteNullRowSQL = function() {
+const deleteNullRowSQL = function () {
   var queryMessage = "DELETE FROM testdb.ProdTable WHERE prodOrderNum = 'undefined'";
   return (queryMessage);
 }
 
-const convertHEXtoCMYK = function(colorHEX) {
+const convertHEXtoCMYK = function (colorHEX) {
   var colorCMYK = convert.hex.cmyk(colorHEX);
 
   colorCyan = colorCMYK[0];
@@ -198,13 +186,13 @@ const convertHEXtoCMYK = function(colorHEX) {
 const compareColor = function (colorHex) {
   // Create two test LAB color objects to compare!
   var colorWhite = { L: 100, A: 0, B: 0 };
-  
+
   var colorOrder = convert.hex.lab(colorHex);
-  colorOrder = {L: colorOrder[0], A: colorOrder[1], B: colorOrder[2]};
+  colorOrder = { L: colorOrder[0], A: colorOrder[1], B: colorOrder[2] };
   //colorOrder = {L: colorHex[0], A: colorHex[1], B: colorHex[2]};
   console.log(convert.hex.lab(colorHex));
   //var colorOrder = convert.hex.lab(colorHex);
   // 2000 formula
-  console.log("Delta E Difference: "+DeltaE.getDeltaE00(colorWhite, colorOrder));
+  console.log("Delta E Difference: " + DeltaE.getDeltaE00(colorWhite, colorOrder));
   deltaE = DeltaE.getDeltaE00(colorWhite, colorOrder);
 }
