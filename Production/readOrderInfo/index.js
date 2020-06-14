@@ -11,62 +11,91 @@
  */
 
 /********************************* Librarys ***********************************/
-const mysql = require('mysql2'); /* require mysql - https://npmdoc.github.io/node-npmdoc-mysql2/build/apidoc.html#apidoc.module.mysql2.promise */
+const mysql = require('mysql2/promise'); /* require mysql - https://npmdoc.github.io/node-npmdoc-mysql2/build/apidoc.html#apidoc.module.mysql2.promise */
 
-var moment = require("moment-timezone");
-
-// var AWS = require('aws-sdk');
 
 /********************************* Variables **********************************/
-var date = 0;
-var time = 0;
-
-var url = 0;
+var res = ''; /** Response of the DB call */
 
 /********************************* SQL Connection *****************************/
-// If 'client' variable doesn't exist
-if (typeof client === 'undefined') {
-  // Connect to the MySQL database
-  var client = mysql.createConnection({
-    host: process.env.RDS_LAMBDA_HOSTNAME,
-    user: process.env.RDS_LAMBDA_USERNAME,
-    password: process.env.RDS_LAMBDA_PASSWORD,
-    port: process.env.RDS_LAMBDA_PORT,
-    database: process.env.RDS_DATABASE,
-  });
 
-  client.connect();
+const settings = {
+  host: process.env.RDS_LAMBDA_HOSTNAME,
+  user: process.env.RDS_LAMBDA_USERNAME,
+  password: process.env.RDS_LAMBDA_PASSWORD,
+  port: process.env.RDS_LAMBDA_PORT,
+  database: process.env.RDS_DATABASE,
+  connectionLimit: 2
 }
+
+const sleep = ms => {
+  return new Promise(resolve => {
+      setTimeout(resolve, ms)
+  })
+}
+
+// // If 'client' variable doesn't exist
+// if (typeof client === 'undefined') {
+//   // Connect to the MySQL database
+//   var client = mysql.createConnection({
+//     host: process.env.RDS_LAMBDA_HOSTNAME,
+//     user: process.env.RDS_LAMBDA_USERNAME,
+//     password: process.env.RDS_LAMBDA_PASSWORD,
+//     port: process.env.RDS_LAMBDA_PORT,
+//     database: process.env.RDS_DATABASE,
+//   });
+
+//   client.connect();
+// }
 
 /******************************************************************************/
 /********************************* Export Handler *****************************/
-exports.handler = (event, context, callback) => {
+exports.handler = async (event, context, callback) => {
 
-  // var date = moment();
-  time = "\'" + moment().format('HH:mm:ss') + "\'";  //get UTC Time
-  date = "\'" + moment().format('DD.MM.YYYY') + "\'";
-  console.log("date & time UTC: " + time + " and " + date);
+  const pool = await mysql.createPool(settings)
 
   console.log('Received event:', JSON.stringify(event, null, 2));
   let orderNumber = JSON.stringify(event);
   orderNumber = JSON.parse(orderNumber);
   // console.log('Color Name: ', orderNumber.body.colorName);
 
-  context.callbackWaitsForEmptyEventLoop = false;
-
   //  compareColor();
 
-  callDB(client, selectProdOrderFromDB(orderNumber), callback);
   console.log("test return");
+
+
+  try {
+
+    const r = await callDB(pool, selectProdOrderFromDB(orderNumber));
+    console.log(r)
+    await sleep(8000)
+    
+
+    const response = {
+      statusCode: 200,
+      body: res
+    };
+
+    console.log(response);
+    return response;
+    //return { "url": data };
+
+  } catch (error) {
+    console.log(error);
+    return { "status": "That did not work" };
+  } finally {
+    await pool.end()
+  }
+
 }
 
 
 /********************************* Database Call ******************************/
-const callDB = (client, queryMessage, callback) => {
+async function callDB (client, queryMessage) {
 
   var queryResult = 0;
 
-  client.promise().query(queryMessage)
+  await client.query(queryMessage)
     .then(
       (results) => {
         queryResult = results[0];
@@ -78,34 +107,24 @@ const callDB = (client, queryMessage, callback) => {
     .then(
       (results) => {
         //queryResult = results[0];
-        
-        const response = {
-          statusCode: 200,
-          body: results
-        };
     
-        callback(null, response);
         console.log("Return " + results);
+        res = results;
+        return results
       })
     .catch(console.log)
-    .then(() => client.end());
 
 };
 
 /********************************* Helper Function SELECT Order FROM DB***********/
 const selectProdOrderFromDB = function (orderNumber) {
-  var queryMessage = "SELECT prodOrderNum, articleNumber, quantity FROM  testdb.ProdTable WHERE prodOrderNum =" + orderNumber.prodOrderNum;
+  var queryMessage = "SELECT prodOrderNum, articleNumber, quantity FROM  testdb.ProdTable WHERE prodOrderNum =" + orderNumber.prodOrderNum + "  LIMIT 1 ";
+  console.log(queryMessage);
   return (queryMessage);
 };
 
 /********************************* Helper Function GET STUFF FROM DB***********/
 const getOrdersFromDB = function () {
   var queryMessage = 'SELECT * FROM testdb.ProdTable LIMIT 10';
-  return (queryMessage);
-};
-
-/********************************* Helper Function GET STUFF FROM DB***********/
-const selectOrdersFromDB = function () {
-  var queryMessage = "SELECT * FROM  testdb.ProdTable WHERE prodStatus =" + "'open'" + "ORDER BY deltaE";
   return (queryMessage);
 };
