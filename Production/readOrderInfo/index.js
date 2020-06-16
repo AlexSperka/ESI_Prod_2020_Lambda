@@ -16,6 +16,7 @@ const mysql = require('mysql2/promise'); /* require mysql - https://npmdoc.githu
 
 /********************************* Variables **********************************/
 var res = ''; /** Response of the DB call */
+const ORDERLIMIT = 15; /** Define how many orders shall be in one CSV file */
 
 /********************************* SQL Connection *****************************/
 
@@ -56,20 +57,26 @@ exports.handler = async (event, context, callback) => {
 
   console.log('Received event:', JSON.stringify(event, null, 2));
   let orderNumber = JSON.stringify(event);
-  orderNumber = JSON.parse(orderNumber);
+  
   // console.log('Color Name: ', orderNumber.body.colorName);
 
   //  compareColor();
 
-  console.log("test return");
-
+  var r = '';
 
   try {
-
-    const r = await callDB(pool, selectProdOrderFromDB(orderNumber));
-    console.log(r)
-    await sleep(8000)
     
+    orderNumber = JSON.parse(orderNumber);
+    
+    if( typeof orderNumber.prodOrderNum != 'undefined' ) {
+      r = await callDB(pool, selectProdOrderFromDB(orderNumber));
+    }
+    else{
+      r = await callDB(pool, getOrdersFromDB());
+    }
+    
+    console.log(r)
+    await sleep(2500)
 
     const response = {
       statusCode: 200,
@@ -125,6 +132,7 @@ const selectProdOrderFromDB = function (orderNumber) {
 
 /********************************* Helper Function GET STUFF FROM DB***********/
 const getOrdersFromDB = function () {
-  var queryMessage = 'SELECT * FROM testdb.ProdTable LIMIT 10';
+  var queryMessage = "SELECT prodOrderNum, endDate, colorHEX, ProdSortNum, prodStatus, quantity, deltaE FROM  testdb.ProdTable WHERE prodStatus ='planned' " + " ORDER BY endDate, deltaE ";
+  console.log(queryMessage)
   return (queryMessage);
 };
