@@ -16,7 +16,7 @@ const mysql = require('mysql2/promise'); /* require mysql - https://npmdoc.githu
 
 /********************************* Variables **********************************/
 var res = ''; /** Response of the DB call */
-const ORDERLIMIT = 15; /** Define how many orders shall be in one CSV file */
+const ORDERLIMIT = 3; /** Define how many orders shall be in one CSV file */
 
 /********************************* SQL Connection *****************************/
 
@@ -34,20 +34,6 @@ const sleep = ms => {
       setTimeout(resolve, ms)
   })
 }
-
-// // If 'client' variable doesn't exist
-// if (typeof client === 'undefined') {
-//   // Connect to the MySQL database
-//   var client = mysql.createConnection({
-//     host: process.env.RDS_LAMBDA_HOSTNAME,
-//     user: process.env.RDS_LAMBDA_USERNAME,
-//     password: process.env.RDS_LAMBDA_PASSWORD,
-//     port: process.env.RDS_LAMBDA_PORT,
-//     database: process.env.RDS_DATABASE,
-//   });
-
-//   client.connect();
-// }
 
 /******************************************************************************/
 /********************************* Export Handler *****************************/
@@ -85,11 +71,19 @@ exports.handler = async (event, context, callback) => {
 
     console.log(response);
     return response;
-    //return { "url": data };
 
   } catch (error) {
-    console.log(error);
-    return { "status": "That did not work" };
+
+    const response = {
+      statusCode: 400,
+      body: {
+        "status": "That did not work",
+        "error": error,
+      }
+    };
+
+    console.log(response);
+    return response;
   } finally {
     await pool.end()
   }

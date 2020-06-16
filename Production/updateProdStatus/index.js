@@ -25,6 +25,9 @@ var url = '';
 var status = '';
 var testForEmptyResponse = 'undefined';
 
+var statusCodeSales = 0;
+var statusCodeProd = '';
+
 var response = '';
 
 const ORDERLIMIT = 3; /** Define how many orders shall be in one CSV file */
@@ -71,34 +74,39 @@ exports.handler = async (event, context) => {
       await callDBupdateStatus(pool, updateProdStatus(data.prodOrderNum));
 
       await callSalesUpdateStatus(data.prodOrderNum);
-      status = "Die CSV Datei wurde erfolgreich erstellt!";
 
+      if (statusCodeSales === 200 && statusCodeProd === 200) {
+        status = "Der Status wurde erfolgreich in der Datenbank aktualisiert.";
+      } else if(statusCodeSales === 200) {
+        status = "Der Status wurde erfolgreich in der V&V Datenbank aktualisiert. Bei der Produktionsdatenbank gab es Probleme.";
+      } else if (statusCodeProd === 200){
+        status = "Der Status wurde erfolgreich in der Produktionsdatenbank aktualisiert. Bei der V&V Datenbank gab es Probleme.";
+      }else {
+        status = "Der Status konnte nicht geupdated werden. Möglicherweise liegt dies daran, dass die Nummer nicht in der Datenbank existiert.";
+      }
     } else {
-      url = '';
-      status = "Es liegen keine neuen Aufträge in der Datenbank vor.";
+      status = "Das hat leider nicht geklappt. Dies könnte daran liegen, dass die eingegebene Nummer nicht das korrekte Format hat";
     }
 
     response = {
       statusCode: 200,
       body: {
-        "url": url,
         "status": status
       }
     };
-    
+
     console.log(response)
 
   } catch (error) {
-    
+
     response = {
       statusCode: 400,
       body: {
-        "url": "That did not work",
         "status": "That did not work",
         "error": error,
       }
     };
-    
+
     console.log(response)
 
   } finally {
@@ -137,7 +145,22 @@ async function callDBupdateStatus(client, queryMessage) {
   await client.query(queryMessage)
     .then(
       (results) => {
-        console.log("Update Production Status" + results)
+        console.log("Update Production Status");
+        console.log(results);
+        var query = JSON.stringify(results[0])
+        query = JSON.parse(query)
+        console.log("Affected Rows in DB: "+query.affectedRows )
+        
+        if( typeof query.affectedRows !== 'undefined'){ /** Check if Response from DB is valid */
+          if(query.affectedRows>0 ){ /** If response is valid and rows are affected by change then statusCodeProd = 200 */
+            statusCodeProd = 200;
+          } else {
+            statusCodeProd = 400;
+          }
+        } else {
+          statusCodeProd = 400;
+        }
+  
         return results;
       })
     .catch(console.log)
@@ -148,21 +171,29 @@ async function callDBupdateStatus(client, queryMessage) {
 async function callSalesUpdateStatus(prodOrderNum) {
   let parsed;
 
-  console.log("Called response Create CSV");
+  console.log("Called Sales Update Status");
 
-  axios.post('https://5club7wre8.execute-api.eu-central-1.amazonaws.com/sales/updatestatus', {"prodOrderNr":prodOrderNum})
-  .then((res) => {
-      console.log(res.data)
-      var data = JSON.stringify(res.data)
-      data = JSON.parse(data)
+  var postData = {
+    "prodOrderNr": prodOrderNum, //Nummer
+    "statusID": '3', //ID des Kunden
+    "statusdescription": 'Produktion abgeschlossen',
+  }
+
+  axios.patch('https://5club7wre8.execute-api.eu-central-1.amazonaws.com/sales/updatestatus', postData)
+    .then((res) => {
+      console.log(res.data);
+      var data = JSON.stringify(res.data);
+      data = JSON.parse(data);
+      statusCodeSales = data.statusCode;
+      console.log("StatusCodeSales :"+statusCodeSales)
       return data
-  })
-  .then(data => {
-      console.log("data: " + data)
-  })
-  .catch(error => {
-      console.log(error)
-  })
+    })
+    .then(data => {
+      console.log("data: " + data);
+    })
+    .catch(error => {
+      console.log(error);
+    })
 }
 
 
@@ -174,7 +205,7 @@ const selectOrdersFromDB = function () {
 };
 
 /********************************* Update Production Status in DB***********/
-const updateProdStatus = function () {
+const updateProdStatus = function (prodOrderNum) {
   //console.log(dataDB)
   dataDB = JSON.parse(dataDB)
   var queryMessageNum = ' ';
@@ -189,7 +220,7 @@ const updateProdStatus = function () {
     }
   }
 
-  var queryMessage = " UPDATE testdb.ProdTable SET prodStatus = 'produced' WHERE prodOrderNum IN (" + queryMessageNum + " );";
+  var queryMessage = " UPDATE testdb.ProdTable SET prodStatus = 'produced' WHERE prodOrderNum IN (" + "'" + prodOrderNum + "'" + " );";
   console.log("String updateProdStatus: " + queryMessage)
 
   return (queryMessage);

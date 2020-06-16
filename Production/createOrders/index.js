@@ -23,7 +23,7 @@
  */
 
 /********************************* Librarys ***********************************/
-const mysql = require('mysql2'); // require mysql
+const mysql = require('mysql2/promise'); // require mysql
 var moment = require("moment-timezone");
 
 var convert = require('color-convert');
@@ -56,54 +56,78 @@ var maxProdSortNum = null;
 
 /********************************* SQL Connection *****************************/
 // If 'client' variable doesn't exist
-if (typeof client === 'undefined') {
-  // Connect to the MySQL database
-  var client = mysql.createConnection({
-    host: process.env.RDS_LAMBDA_HOSTNAME,
-    user: process.env.RDS_LAMBDA_USERNAME,
-    password: process.env.RDS_LAMBDA_PASSWORD,
-    port: process.env.RDS_LAMBDA_PORT,
-    database: process.env.RDS_DATABASE,
-  });
+const settings = {
+  host: process.env.RDS_LAMBDA_HOSTNAME,
+  user: process.env.RDS_LAMBDA_USERNAME,
+  password: process.env.RDS_LAMBDA_PASSWORD,
+  port: process.env.RDS_LAMBDA_PORT,
+  database: process.env.RDS_DATABASE,
+  connectionLimit: 2
+}
 
-  client.connect();
+/********************************* Timeout Fct *****************************/
+const sleep = ms => {
+  return new Promise(resolve => {
+    setTimeout(resolve, ms)
+  })
 }
 
 /******************************************************************************/
 /********************************* Export Handler *****************************/
 exports.handler = async (event, context, callback) => {
 
+  const pool = await mysql.createPool(settings)
+
   time = "\'" + moment().format('HH:mm:ss') + "\'";  //get UTC Time
   date = "\'" + moment().format('DD.MM.YYYY') + "\'";
   console.log("date & time UTC: " + time + " and " + date);
 
   console.log('Received event:', JSON.stringify(event, null, 2));
-  let newOrder = JSON.stringify(event);
-  newOrder = JSON.parse(newOrder);
-
-  context.callbackWaitsForEmptyEventLoop = false;
 
   try {
+
+    let newOrder = JSON.stringify(event);
+    newOrder = JSON.parse(newOrder);
+
     convertHEXtoCMYK(newOrder.body.color);
     compareColor(newOrder.body.color);
 
-    await getMaxValue(client)
+    await getMaxValue(pool)
 
-    await callDB(client, writeOrdersToDB(newOrder, date, time));
+    await callDB(pool, writeOrdersToDB(newOrder, date, time));
 
-    client.close();
+    const response = {
+      statusCode: 200,
+      body: {
+        "prodOrderNum": productionOrderNumber,
+        "prodSortNum": prodSortNum,
+      }
+    };
 
-    return {"prodOrderNum" : productionOrderNumber};
+    return response;
 
   } catch (error) {
     console.log(error);
-    return {"prodOrderNum" : "That did not work"};
+
+    const response = {
+      statusCode: 400,
+      body: {
+        "prodOrderNum": productionOrderNumber,
+        "prodSortNum": prodSortNum,
+        "error": error,
+      }
+    };
+
+    return response;
+  } finally {
+    await pool.end()
   }
+
 };
 
 /********************************* Generic Database Call ******************************/
 async function callDB(client, queryMessage) {
-  await client.promise().query(queryMessage)
+  await client.query(queryMessage)
     .then(
       (results) => {
         console.log("Database response:")
@@ -115,7 +139,7 @@ async function callDB(client, queryMessage) {
 /********************************* Database Call Max Value ******************************/
 async function getMaxValue(client) {
   var queryMessage = "SELECT MAX(ProdSortNum) AS 'ProdSortNum' FROM testdb.ProdTable";
-  await client.promise().query(queryMessage)
+  await client.query(queryMessage)
     .then(results => {
       console.log(results[0]);
       var data = results[0];
