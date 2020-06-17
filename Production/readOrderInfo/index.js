@@ -1,14 +1,27 @@
 /**
  * Function to add new Orders to production table
- * 
+ * @author Alex Sp
+ * @date 2020-06-17 
  * @alias    esi_prod_readOrderInfo
  * @memberof ProductionTeamESI
  *
- *
- * @param ProdOrderNum
- *
- * @return {String} Order Information
- */
+ * Option 1:
+ * @param orderStatus (open, planned, produced) to get only the queries with the flag
+  {
+    "orderStatus": "planned"
+  }
+* @return {Object} get only the queries with the flag
+*
+* Option 2: 
+* @param ProdOrderNum to get only the order with this prodOrderNum back
+  {
+    "prodOrderNum": "'10'"
+  }
+* @return {Object} get only the order with this prodOrderNum back
+*
+* Option 3: empty - complete database results will be returned
+* @return {Object} returns everything
+*/
 
 /********************************* Librarys ***********************************/
 const mysql = require('mysql2/promise'); /* require mysql - https://npmdoc.github.io/node-npmdoc-mysql2/build/apidoc.html#apidoc.module.mysql2.promise */

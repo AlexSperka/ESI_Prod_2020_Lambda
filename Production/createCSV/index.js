@@ -1,10 +1,27 @@
-// https://stackoverflow.com/questions/55206407/nodejs-csv-data-dump-into-s3-object
+/**
+ * Function gets called by Frontend and updates the production status in prod DB as well as sales status in sales DB 
+ * @author Alex Sp
+ * @date 2020-06-17
+ * @alias    esi_prod_createCSV
+ * @memberof ProductionTeamESI
+ *
+ * is called by SortOrders
+ * 
+ * @param object json array with the orders
+ * {
+    "prodOrderNum": "1"
+   }
+ *
+ * @return {String} Return URL where CSV file with next orders can be downloaded
+ */
 
+/********************************* Librarys ***********************************/
 var AWS = require('aws-sdk');
 var moment = require("moment-timezone");
 // const json2csvParser = require('json2csv');
 const { parse } = require('json2csv');
 
+/********************************* Variables **********************************/
 // get reference to S3 client
 const s3 = new AWS.S3();
 
@@ -17,6 +34,8 @@ var dstBucketQualityValues = 'esi-prod-bucket-qualityvalues';
 var qualityCSV = 'orders-';
 var dstKey = 'Default.csv';
 
+/******************************************************************************/
+/********************************* Export Handler *****************************/
 exports.handler = async (event, context, callback) => {
 
     console.log(event);
@@ -43,7 +62,7 @@ exports.handler = async (event, context, callback) => {
             Body: Buffer.from(csv),
         };
 
-        const putResult = await s3.putObject(destparams).promise();
+        const putResult = await s3.putObject(destparams).promise(); /** Save CSV to Bucket */
 
     } catch (error) {
         console.log('Error thrown: ' + error);
@@ -60,7 +79,7 @@ exports.handler = async (event, context, callback) => {
     return response;
 };
 
-
+/********************************* Assemble URL Link****************************/
 const getUrlFromBucket=(bucket,fileName)=>{
     return 'https://'+bucket+'.s3.eu-central-1.amazonaws.com/'+fileName
 };

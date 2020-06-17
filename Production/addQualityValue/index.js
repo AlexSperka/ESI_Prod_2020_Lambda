@@ -1,12 +1,13 @@
 /**
  * Function to get Quality Values from MAWI API and forward it to Prod Frontend
- * 
+ * @author Alex Sp
+ * @date 2020-06-17
  * @alias    esi_prod_addQualityValue
  * @memberof ProductionTeamESI
- * *
+ * 
  * @param none, Charge Number
  *
- * @return {String} Return Quality Values from Mawi
+ * @return {Object} Return Quality Values from Mawi
  */
 
 /********************************* Librarys ***********************************/
