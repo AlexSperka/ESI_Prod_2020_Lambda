@@ -1,13 +1,13 @@
 /**
  * Function to add new Orders to production table
- * 
- * @alias    esi_prod_createOrders
+ * @author Alex Sp
+ * @date 2020-06-17
+ * @alias esi_prod_createOrders
  * @memberof ProductionTeamESI
  *
  * @param {Object} orderObject     JSON Object with new Order
  * {
       "body": {
-        "endDate": "25.05.2020",
         "orderNumber": "C-20170327-90125",
         "lineItem": 1,
         "articleNumber": "10000001",
@@ -19,7 +19,13 @@
       }
     }
  *
- * @return {String} Return value description.
+ * @return {Object} Return response object including the prodOrderNum for Sales:
+ * {
+    "statusCode": 200,
+    "body": {
+      "prodOrderNum": 46
+    }
+  }
  */
 
 /********************************* Librarys ***********************************/
@@ -31,7 +37,7 @@ var DeltaE = require('delta-e');
 
 var tools = require('./tools'); /**  helper functions regarding SQL calls (SELECT, ALTER, ADD, DELETE, ...) */
 
-/********************************* Variables **********************************/
+/********************************* Global Variables **************************/
 var date = 0;
 var time = 0;
 var endDate = 0;
@@ -45,7 +51,7 @@ var quantity = 0;
 var hasPrint = 0;
 var motiveNumber = 0;
 var prodStatus = "\'" + 'open' + "\'";
-var splitOrders = "\'" + 'False' + "\'";
+var splitOrders = "\'" + 'False' + "\'"; 
 
 var colorCyan = 0;
 var colorMagenta = 0;
@@ -54,6 +60,8 @@ var colorKey = 0;
 
 var deltaE = 0;
 var maxProdOrderNum = null;
+
+var response = '';
 
 /********************************* SQL Connection *****************************/
 // If 'client' variable doesn't exist
@@ -66,7 +74,7 @@ const settings = {
   connectionLimit: 2
 }
 
-/********************************* Timeout Fct *****************************/
+/********************************* Sleep Fct *****************************/
 const sleep = ms => {
   return new Promise(resolve => {
     setTimeout(resolve, ms)
@@ -79,25 +87,44 @@ exports.handler = async (event, context, callback) => {
 
   const pool = await mysql.createPool(settings)
 
-  time = "\'" + moment().format('HH:mm:ss') + "\'";  //get UTC Time
+  time = "\'" + moment().format('HH:mm:ss') + "\'";       /** get UTC Time */
   date = "\'" + moment().format('YYYY:MM:DD') + "\'";
-  console.log("date & time UTC: " + time + " and " + date);
-
+  endDate = "\'" + moment(moment(date, "YYYY:MM:DD").add(3, 'days')).format('YYYY:MM:DD') + "\'"; /** Enddate promised to customer */
+  
+  console.log("date & time UTC: " + time + " and " + date + ' and Enddate: '+endDate);
   console.log('Received event:', JSON.stringify(event, null, 2));
 
   try {
-
-    let newOrder = JSON.stringify(event);
+    let newOrder = JSON.stringify(event);                 /** Getting input from lambda call, parsing it */
     newOrder = JSON.parse(newOrder);
 
-    convertHEXtoCMYK(newOrder.body.color);
-    compareColor(newOrder.body.color);
+    convertHEXtoCMYK(newOrder.body.color);                /** Converting colours into machine readable format */
+    compareColor(newOrder.body.color);                    /** Comparing colors in LAB color to "white" to calculate Delta E distance */
 
-    await getMaxValue(pool)
+    await getMaxValue(pool)                               /** Getting highest (last) prodOrderNum from the Database */
+    await sleep(100)
 
-    await callDB(pool, writeOrdersToDB(newOrder, date, time));
+    if(maxProdOrderNum > 0){ 
+      await callDB(pool, writeOrdersToDB(newOrder, date, time)); /** Getting input from lambda call, parsing it */
+    } else {
+      await sleep(100)
+      await getMaxValue(pool)                             /** Hotfix for production, just start DB query again when not a valid number is returned */
+      
+      if(maxProdOrderNum > 0){
+        await callDB(pool, writeOrdersToDB(newOrder, date, time));
+      }
+      else{
+        response = {
+          statusCode: 400,
+          body: {
+            "prodOrderNum": "Da hat etwas mit der Produktionsauftragsnummer nicht geklappt. Bitte versuchen Sie es erneut!",
+          }
+        };
+      return response;
+      }
+    }
 
-    const response = {
+    response = {                                          /** Returning the new prodOrderNum to Sales and sending statuscode 200 */
       statusCode: 200,
       body: {
         "prodOrderNum": productionOrderNumber,
@@ -109,10 +136,10 @@ exports.handler = async (event, context, callback) => {
   } catch (error) {
     console.log(error);
 
-    const response = {
+    response = {
       statusCode: 400,
       body: {
-        "prodOrderNum": productionOrderNumber,
+        "prodOrderNum": "Da hat etwas nicht geklappt",
         "error": error,
       }
     };
@@ -135,18 +162,18 @@ async function callDB(client, queryMessage) {
     .catch(console.log)
 };
 
-/********************************* Database Call Max Value ******************************/
+/********************************* Database Get Max Value of ProdOrderNum ************/
 async function getMaxValue(client) {
-  var queryMessage = "SELECT MAX(prodOrderNum) AS 'ProdOrderNum' FROM esi_prod.ProdTable";
+  var queryMessage = "SELECT MAX(prodOrderNum) AS 'prodOrderNum' FROM esi_prod.ProdTable";
   await client.query(queryMessage)
     .then(results => {
       console.log(results[0]);
       var data = results[0];
       data = data[0];
-      data = JSON.stringify(data.ProdOrderNum);
+      data = JSON.stringify(data.prodOrderNum);
       
       if(maxProdOrderNum === null) {
-        maxProdOrderNum = 0;
+        maxProdOrderNum = -1;
       } else {
         maxProdOrderNum = parseInt(data, 10);
       }
@@ -158,8 +185,7 @@ async function getMaxValue(client) {
 
 /********************************* Creating Order String for SQL***************/
 const writeOrdersToDB = function (newOrder, date, time) {
-  endDate = "\'" + newOrder.body.endDate + "\'"; //Promised date to customer
-  
+
   if(typeof newOrder.body.orderNumber !== 'undefined'){
     orderNumber = "\'" + newOrder.body.orderNumber + "\'"
   } else { orderNumber = null }
