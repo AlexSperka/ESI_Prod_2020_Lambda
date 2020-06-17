@@ -17,6 +17,7 @@ const mysql = require('mysql2/promise'); /* require mysql - https://npmdoc.githu
 /********************************* Variables **********************************/
 var res = ''; /** Response of the DB call */
 const ORDERLIMIT = 3; /** Define how many orders shall be in one CSV file */
+var response = '';
 
 /********************************* SQL Connection *****************************/
 
@@ -31,7 +32,7 @@ const settings = {
 
 const sleep = ms => {
   return new Promise(resolve => {
-      setTimeout(resolve, ms)
+    setTimeout(resolve, ms)
   })
 }
 
@@ -42,8 +43,7 @@ exports.handler = async (event, context, callback) => {
   const pool = await mysql.createPool(settings)
 
   console.log('Received event:', JSON.stringify(event, null, 2));
-  let orderNumber = JSON.stringify(event);
-  
+
   // console.log('Color Name: ', orderNumber.body.colorName);
 
   //  compareColor();
@@ -51,30 +51,44 @@ exports.handler = async (event, context, callback) => {
   var r = '';
 
   try {
-    
+    let orderNumber = JSON.stringify(event);
     orderNumber = JSON.parse(orderNumber);
-    
-    if( typeof orderNumber.prodOrderNum != 'undefined' ) {
-      r = await callDB(pool, selectProdOrderFromDB(orderNumber));
-    }
-    else{
-      r = await callDB(pool, getOrdersFromDB());
-    }
-    
-    console.log(r)
-    await sleep(2500)
 
-    const response = {
+    if (typeof orderNumber.prodOrderNum != 'undefined') {
+      r = await callDB(pool, selectProdOrderFromDB(orderNumber));
+
+      var query = JSON.stringify(res)
+      query = JSON.parse(query)
+      if (typeof query[0] === 'undefined') {
+        response = {
+          statusCode: 400,
+          body: {
+            "status": "Diese ProdOrderNum existiert nicht in der Produktionsdatenbank.",
+          }
+        }
+        return response
+      }
+    }
+    else if (typeof orderNumber.orderStatus != 'undefined') {
+      r = await callDB(pool, selectOrdersFromDB(orderNumber));
+    } else {
+      r = await callDB(pool, getAllOrdersFromDB());
+    }
+
+    response = {
       statusCode: 200,
       body: res
     };
 
+    await sleep(2000)
+
     console.log(response);
     return response;
+    //return { "url": data };
 
   } catch (error) {
 
-    const response = {
+    response = {
       statusCode: 400,
       body: {
         "status": "That did not work",
@@ -92,7 +106,7 @@ exports.handler = async (event, context, callback) => {
 
 
 /********************************* Database Call ******************************/
-async function callDB (client, queryMessage) {
+async function callDB(client, queryMessage) {
 
   var queryResult = 0;
 
@@ -108,7 +122,7 @@ async function callDB (client, queryMessage) {
     .then(
       (results) => {
         //queryResult = results[0];
-    
+
         console.log("Return " + results);
         res = results;
         return results
@@ -119,14 +133,23 @@ async function callDB (client, queryMessage) {
 
 /********************************* Helper Function SELECT Order FROM DB***********/
 const selectProdOrderFromDB = function (orderNumber) {
-  var queryMessage = "SELECT prodOrderNum, articleNumber, quantity FROM  testdb.ProdTable WHERE prodOrderNum =" + orderNumber.prodOrderNum + "  LIMIT 1 ";
+  var queryMessage = "SELECT prodOrderNum, articleNumber, quantity FROM  esi_prod.ProdTable WHERE prodOrderNum =" + orderNumber.prodOrderNum + "  LIMIT 1 ";
   console.log(queryMessage);
   return (queryMessage);
 };
 
 /********************************* Helper Function GET STUFF FROM DB***********/
-const getOrdersFromDB = function () {
-  var queryMessage = "SELECT prodOrderNum, endDate, colorHEX, ProdSortNum, prodStatus, quantity, deltaE FROM  testdb.ProdTable WHERE prodStatus ='planned' " + " ORDER BY endDate, deltaE ";
+const selectOrdersFromDB = function (order) {
+
+  var queryMessage = "SELECT prodOrderNum, endDate, colorHEX, prodStatus, quantity, deltaE FROM  esi_prod.ProdTable WHERE prodStatus = '" + order.orderStatus + "'" + " ORDER BY endDate, deltaE ";
+  console.log(queryMessage)
+  return (queryMessage);
+};
+
+/********************************* Helper Function GET STUFF FROM DB***********/
+const getAllOrdersFromDB = function () {
+
+  var queryMessage = "SELECT prodOrderNum, endDate, colorHEX, prodStatus, quantity, deltaE FROM  esi_prod.ProdTable ORDER BY endDate, deltaE ";
   console.log(queryMessage)
   return (queryMessage);
 };

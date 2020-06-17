@@ -11,10 +11,10 @@ const s3 = new AWS.S3();
 var output = 'Default';
 var myBody = Buffer.from(output);
 
-var dstBucketOrders = 'esi-prod-bucket';
+var dstBucket = 'esi-prod-bucket';
 var dstBucketQualityValues = 'esi-prod-bucket-qualityvalues';
 
-var qualityCSV = 'qualityValues-';
+var qualityCSV = 'orders-';
 var dstKey = 'Default.csv';
 
 exports.handler = async (event, context, callback) => {
@@ -29,21 +29,15 @@ exports.handler = async (event, context, callback) => {
         let dataCSV = JSON.stringify(event);
         dataCSV = JSON.parse(dataCSV);
 
-        const fields = ['ProdSortNum','prodOrderNum','articleNumber','colorHEX','colorCyan','colorMagenta','colorYellow','colorKey','quantity','hasPrint','motiveNumber'];
+        const fields = ['prodOrderNum','orderNumber','endDate','lineItem','articleNumber','colorHEX','colorCyan','colorMagenta','colorYellow','colorKey','quantity','hasPrint','motiveNumber'];
         const opts = {fields};
         const csv = parse(dataCSV, opts);
 //        const csv = parse(dataCSV.results, opts);
 
         dstKey = qualityCSV+date+time+'.csv';
 
-        if(dataCSV.type == "qualityvalues"){
-            dstBucketOrders=dstBucketQualityValues;
-            console.log("Bucket: "+ dstBucketOrders);
-            const fields = ['Material','Lieferdatum','Viskiosität','ppml','DeltaE','Saugfähigkeit','Weißgrad'];
-        } 
-
         const destparams = {
-            Bucket: dstBucketOrders,
+            Bucket: dstBucket,
             Key: dstKey,
             // Body: myBody,
             Body: Buffer.from(csv),

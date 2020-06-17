@@ -112,7 +112,7 @@ exports.handler = async (event, context, callback) => {
     const response = {
       statusCode: 400,
       body: {
-        "prodOrderNum": "That did not work",
+        "prodOrderNum": productionOrderNumber,
         "error": error,
       }
     };
@@ -159,7 +159,11 @@ async function getMaxValue(client) {
 /********************************* Creating Order String for SQL***************/
 const writeOrdersToDB = function (newOrder, date, time) {
   endDate = "\'" + newOrder.body.endDate + "\'"; //Promised date to customer
-  orderNumber = "\'" + newOrder.body.orderNumber + "\'"
+  
+  if(typeof newOrder.body.orderNumber !== 'undefined'){
+    orderNumber = "\'" + newOrder.body.orderNumber + "\'"
+  } else { orderNumber = null }
+  
   lineItem = "\'" + newOrder.body.lineItem + "\'"
   articleNumber = +newOrder.body.articleNumber;
   color = "\'" + newOrder.body.color + "\'";
