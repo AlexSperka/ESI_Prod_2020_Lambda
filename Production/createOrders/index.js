@@ -35,6 +35,8 @@ var tools = require('./tools'); /**  helper functions regarding SQL calls (SELEC
 var date = 0;
 var time = 0;
 var endDate = 0;
+var orderNumber = 0;
+var lineItem = 0;
 var productionOrderNumber = 0;
 var articleNumber = 0;
 var color = 0;
@@ -42,7 +44,6 @@ var colorName = 0;
 var quantity = 0;
 var hasPrint = 0;
 var motiveNumber = 0;
-var prodSortNum = 0;
 var prodStatus = "\'" + 'open' + "\'";
 var splitOrders = "\'" + 'False' + "\'";
 
@@ -52,7 +53,7 @@ var colorYellow = 0;
 var colorKey = 0;
 
 var deltaE = 0;
-var maxProdSortNum = null;
+var maxProdOrderNum = null;
 
 /********************************* SQL Connection *****************************/
 // If 'client' variable doesn't exist
@@ -79,7 +80,7 @@ exports.handler = async (event, context, callback) => {
   const pool = await mysql.createPool(settings)
 
   time = "\'" + moment().format('HH:mm:ss') + "\'";  //get UTC Time
-  date = "\'" + moment().format('DD.MM.YYYY') + "\'";
+  date = "\'" + moment().format('YYYY:MM:DD') + "\'";
   console.log("date & time UTC: " + time + " and " + date);
 
   console.log('Received event:', JSON.stringify(event, null, 2));
@@ -100,7 +101,6 @@ exports.handler = async (event, context, callback) => {
       statusCode: 200,
       body: {
         "prodOrderNum": productionOrderNumber,
-        "prodSortNum": prodSortNum,
       }
     };
 
@@ -112,8 +112,7 @@ exports.handler = async (event, context, callback) => {
     const response = {
       statusCode: 400,
       body: {
-        "prodOrderNum": productionOrderNumber,
-        "prodSortNum": prodSortNum,
+        "prodOrderNum": "That did not work",
         "error": error,
       }
     };
@@ -138,16 +137,21 @@ async function callDB(client, queryMessage) {
 
 /********************************* Database Call Max Value ******************************/
 async function getMaxValue(client) {
-  var queryMessage = "SELECT MAX(ProdSortNum) AS 'ProdSortNum' FROM testdb.ProdTable";
+  var queryMessage = "SELECT MAX(prodOrderNum) AS 'ProdOrderNum' FROM esi_prod.ProdTable";
   await client.query(queryMessage)
     .then(results => {
       console.log(results[0]);
       var data = results[0];
       data = data[0];
-      data = JSON.stringify(data.ProdSortNum);
-      console.log("Max Prod Num = " + data);
+      data = JSON.stringify(data.ProdOrderNum);
+      
+      if(maxProdOrderNum === null) {
+        maxProdOrderNum = 0;
+      } else {
+        maxProdOrderNum = parseInt(data, 10);
+      }
+      console.log("Max Prod Num = " + maxProdOrderNum);
 
-      maxProdSortNum = parseInt(data, 10);
     })
     .catch(console.log)
 };
@@ -155,7 +159,8 @@ async function getMaxValue(client) {
 /********************************* Creating Order String for SQL***************/
 const writeOrdersToDB = function (newOrder, date, time) {
   endDate = "\'" + newOrder.body.endDate + "\'"; //Promised date to customer
-  productionOrderNumber = "\'" + newOrder.body.orderNumber + "-" + newOrder.body.lineItem + "\'";
+  orderNumber = "\'" + newOrder.body.orderNumber + "\'"
+  lineItem = "\'" + newOrder.body.lineItem + "\'"
   articleNumber = +newOrder.body.articleNumber;
   color = "\'" + newOrder.body.color + "\'";
   colorName = "\'" + newOrder.body.colorName + "\'";
@@ -164,10 +169,9 @@ const writeOrdersToDB = function (newOrder, date, time) {
   hasPrint = (newOrder.body.hasPrint != 'False') ? 1 : 0; //if hasPrint true then 1 otherwise 0
   motiveNumber = newOrder.body.motiveNumber;
 
-  prodSortNum = maxProdSortNum + 1;
-  // This will allow us to freeze open connections to a database
+  productionOrderNumber = parseInt(maxProdOrderNum) + 1;
 
-  let newOrderString = "INSERT INTO testdb.ProdTable values(" + date + "," + time + "," + endDate + "," + productionOrderNumber + "," + articleNumber + "," + color + "," + colorName + "," + quantity + "," + hasPrint + "," + motiveNumber + "," + prodSortNum + "," + prodStatus + "," + splitOrders + "," + colorCyan + "," + colorMagenta + "," + colorYellow + "," + colorKey + "," + deltaE + ")";
+  let newOrderString = "INSERT INTO esi_prod.ProdTable values(" + date + "," + time + "," + endDate + "," + orderNumber+ "," +  lineItem + "," + productionOrderNumber + "," + articleNumber + "," + color + "," + colorName + "," + quantity + "," + hasPrint + "," + motiveNumber + "," + prodStatus + "," + splitOrders + "," + colorCyan + "," + colorMagenta + "," + colorYellow + "," + colorKey + "," + deltaE + ")";
   console.log(newOrderString);
   return (newOrderString);
 };
