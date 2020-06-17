@@ -1,12 +1,15 @@
 /**
- * Function to get Orders from production table and sort them by color (light to dark), shipping date and production status
- * 
- * @alias    esi_prod_sortOrders
+ * Function gets called by Frontend and updates the production status in prod DB as well as sales status in sales DB 
+ * @author Alex Sp
+ * @date 2020-06-17
+ * @alias    esi_prod_updateProdStatus
  * @memberof ProductionTeamESI
  *
- * @fires   esi_prod_callCSV
  *
- * @param none, TBD later
+ * @param object, including prodOrderNum which shall be updated
+ * {
+    "prodOrderNum": "1"
+   }
  *
  * @return {String} Return URL where CSV file with next orders can be downloaded
  */
@@ -16,6 +19,9 @@ const mysql = require('mysql2/promise'); /* require mysql - https://npmdoc.githu
 const axios = require('axios');
 
 const moment = require("moment-timezone");
+
+/********************************* Consts Var**********************************/
+const ORDERLIMIT = 3; /** Define how many orders shall be in one CSV file */
 
 /********************************* Variables **********************************/
 var date = 0;
@@ -30,8 +36,6 @@ var statusCodeProd = '';
 
 var response = '';
 
-const ORDERLIMIT = 3; /** Define how many orders shall be in one CSV file */
-
 /********************************* SQL Connection *****************************/
 // If 'client' variable doesn't exist
 const settings = {
@@ -43,7 +47,7 @@ const settings = {
   connectionLimit: 2
 }
 
-/********************************* Timeout Fct *****************************/
+/********************************* Sleep Fct *****************************/
 const sleep = ms => {
   return new Promise(resolve => {
     setTimeout(resolve, ms)
@@ -66,8 +70,7 @@ exports.handler = async (event, context) => {
   try {
 
     let data = JSON.stringify(event);
-    data = JSON.parse(data);  /** Unused right now, for later POST implementations when handing over parameters */
-
+    data = JSON.parse(data);
 
     if (typeof data.prodOrderNum !== 'undefined') {
 
@@ -200,7 +203,7 @@ async function callSalesUpdateStatus(prodOrderNum) {
 
 /********************************* Helper Function GET STUFF FROM DB***********/
 const selectOrdersFromDB = function () {
-  var queryMessage = "SELECT * FROM  testdb.ProdTable WHERE prodStatus =" + "'open'" + "ORDER BY endDate, deltaE" + " LIMIT " + ORDERLIMIT;
+  var queryMessage = "SELECT * FROM  esi_prod.ProdTable WHERE prodStatus =" + "'open'" + "ORDER BY endDate, deltaE" + " LIMIT " + ORDERLIMIT;
   return (queryMessage);
 };
 
@@ -210,7 +213,7 @@ const updateProdStatus = function (prodOrderNum) {
   dataDB = JSON.parse(dataDB)
   var queryMessageNum = ' ';
 
-  for (var i = 0; i < dataDB.length; i++) {
+  for (var i = 0; i < dataDB.length; i++) { /** updating all the status for the selected orders in DB */
     var obj = dataDB[i];
     if (i < dataDB.length - 1) {
       queryMessageNum += "'" + obj.prodOrderNum + "'" + " , ";
@@ -220,7 +223,7 @@ const updateProdStatus = function (prodOrderNum) {
     }
   }
 
-  var queryMessage = " UPDATE testdb.ProdTable SET prodStatus = 'produced' WHERE prodOrderNum IN (" + "'" + prodOrderNum + "'" + " );";
+  var queryMessage = " UPDATE esi_prod.ProdTable SET prodStatus = 'produced' WHERE prodOrderNum IN (" + "'" + prodOrderNum + "'" + " );";
   console.log("String updateProdStatus: " + queryMessage)
 
   return (queryMessage);

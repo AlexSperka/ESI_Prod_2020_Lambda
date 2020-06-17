@@ -1,15 +1,17 @@
 /**
  * Function to get Orders from production table and sort them by color (light to dark), shipping date and production status
- * 
+ * @author Alex Sp
+ * @date 2020-06-17 
  * @alias    esi_prod_sortOrders
  * @memberof ProductionTeamESI
  *
- * @fires   esi_prod_callCSV
+ * @fires   esi_prod_callCSV and handing over the query including the next orders
  *
- * @param none, TBD later
+ * @param none
  *
  * @return {String} Return URL where CSV file with next orders can be downloaded
  */
+
 
 /********************************* Librarys ***********************************/
 const mysql = require('mysql2/promise'); /* require mysql - https://npmdoc.github.io/node-npmdoc-mysql2/build/apidoc.html#apidoc.module.mysql2.promise */
@@ -65,12 +67,15 @@ exports.handler = async (event, context) => {
     let data = JSON.stringify(event);
     data = JSON.parse(data);  /** Unused right now, for later POST implementations when handing over parameters */
 
+    await callDB(pool, selectOrdersFromDB()); /** Get 10 entries ordered by date, delta e and prod status */
 
-    if (typeof data.prodOrderNum !== 'undefined') {
+    console.log("Test for Empty Response: " + testForEmptyResponse);
 
-      await callDBupdateStatus(pool, updateProdStatus(data.prodOrderNum));
+    if (typeof testForEmptyResponse !== 'undefined') {
 
-      await callSalesUpdateStatus(data.prodOrderNum);
+      await callDBupdateStatus(pool, await updateProdStatus());
+
+      await callCreateCSV(dataDB);
       status = "Die CSV Datei wurde erfolgreich erstellt!";
 
     } else {
@@ -145,6 +150,28 @@ async function callDBupdateStatus(client, queryMessage) {
 }
 
 /********************************* Call Lambda function CreateCSV ******************************/
+async function callCreateCSV(prodOrderNum) {
+  let parsed;
+
+  var responseCreateCSV = 0;
+  console.log("Called response Create CSV");
+
+  await axios.post('https://2pkivl4tnh.execute-api.eu-central-1.amazonaws.com/prod/createCSV', prodOrderNum)
+    .then((res) => {
+
+      console.log("Res.data = " + res.data.body);
+      //data = JSON.stringify(res.data)
+      data = JSON.parse(res.data.body);
+      url = data.url
+      console.log("URL: " + data.url);
+      return data.url;
+    })
+    .catch((error) => {
+      console.error(error)
+    })
+}
+
+/********************************* Update Sales status ******************************/
 async function callSalesUpdateStatus(prodOrderNum) {
   let parsed;
 
@@ -165,16 +192,14 @@ async function callSalesUpdateStatus(prodOrderNum) {
   })
 }
 
-
-
 /********************************* Helper Function GET STUFF FROM DB***********/
 const selectOrdersFromDB = function () {
-  var queryMessage = "SELECT * FROM  testdb.ProdTable WHERE prodStatus =" + "'open'" + "ORDER BY endDate, deltaE" + " LIMIT " + ORDERLIMIT;
+  var queryMessage = "SELECT * FROM  esi_prod.ProdTable WHERE prodStatus =" + "'open'" + "ORDER BY endDate, deltaE" + " LIMIT " + ORDERLIMIT;
   return (queryMessage);
 };
 
 /********************************* Update Production Status in DB***********/
-const updateProdStatus = function () {
+async function updateProdStatus () {
   //console.log(dataDB)
   dataDB = JSON.parse(dataDB)
   var queryMessageNum = ' ';
@@ -183,13 +208,14 @@ const updateProdStatus = function () {
     var obj = dataDB[i];
     if (i < dataDB.length - 1) {
       queryMessageNum += "'" + obj.prodOrderNum + "'" + " , ";
+      await callSalesUpdateStatus(obj.prodOrderNum) /** updating all Status in the Sales DB as well */
       //console.log(obj.prodOrderNum);
     } else {
       queryMessageNum += "'" + obj.prodOrderNum + "'";
     }
   }
 
-  var queryMessage = " UPDATE testdb.ProdTable SET prodStatus = 'produced' WHERE prodOrderNum IN (" + queryMessageNum + " );";
+  var queryMessage = " UPDATE esi_prod.ProdTable SET prodStatus = 'planned' WHERE prodOrderNum IN (" + queryMessageNum + " );";
   console.log("String updateProdStatus: " + queryMessage)
 
   return (queryMessage);
