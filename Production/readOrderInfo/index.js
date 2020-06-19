@@ -146,7 +146,7 @@ async function callDB(client, queryMessage) {
 
 /********************************* Helper Function SELECT Order FROM DB***********/
 const selectProdOrderFromDB = function (orderNumber) {
-  var queryMessage = "SELECT prodOrderNum, articleNumber, quantity FROM  esi_prod.ProdTable WHERE prodOrderNum =" + orderNumber.prodOrderNum + "  LIMIT 1 ";
+  var queryMessage = "SELECT prodOrderNum, orderNumber, lineItem, articleNumber, quantity FROM  esi_prod.ProdTable WHERE prodOrderNum =" + orderNumber.prodOrderNum + "  LIMIT 1 ";
   console.log(queryMessage);
   return (queryMessage);
 };
@@ -154,7 +154,7 @@ const selectProdOrderFromDB = function (orderNumber) {
 /********************************* Helper Function GET STUFF FROM DB***********/
 const selectOrdersFromDB = function (order) {
 
-  var queryMessage = "SELECT prodOrderNum, endDate, colorHEX, prodStatus, quantity, deltaE FROM  esi_prod.ProdTable WHERE prodStatus = '" + order.orderStatus + "'" + " ORDER BY endDate, deltaE ";
+  var queryMessage = "SELECT prodOrderNum, orderNumber, lineItem, endDate, articleNumber, colorHEX, prodStatus, quantity, deltaE FROM  esi_prod.ProdTable WHERE prodStatus = '" + order.orderStatus + "'" + " ORDER BY endDate, deltaE ";
   console.log(queryMessage)
   return (queryMessage);
 };
@@ -162,7 +162,7 @@ const selectOrdersFromDB = function (order) {
 /********************************* Helper Function GET STUFF FROM DB***********/
 const getAllOrdersFromDB = function () {
 
-  var queryMessage = "SELECT prodOrderNum, endDate, colorHEX, prodStatus, quantity, deltaE FROM  esi_prod.ProdTable ORDER BY endDate, deltaE ";
+  var queryMessage = "SELECT prodOrderNum, orderNumber, lineItem, endDate, articleNumber, colorHEX, prodStatus, quantity, deltaE FROM  esi_prod.ProdTable ORDER BY endDate, deltaE ";
   console.log(queryMessage)
   return (queryMessage);
 };

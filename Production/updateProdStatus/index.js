@@ -78,14 +78,18 @@ exports.handler = async (event, context) => {
 
       await callSalesUpdateStatus(data.prodOrderNum);
 
+      await sleep(500)
+
       if (statusCodeSales === 200 && statusCodeProd === 200) {
         status = "Der Status wurde erfolgreich in der Datenbank aktualisiert.";
-      } else if(statusCodeSales === 200) {
-        status = "Der Status wurde erfolgreich in der V&V Datenbank aktualisiert. Bei der Produktionsdatenbank gab es Probleme.";
-      } else if (statusCodeProd === 200){
-        status = "Der Status wurde erfolgreich in der Produktionsdatenbank aktualisiert. Bei der V&V Datenbank gab es Probleme.";
-      }else {
-        status = "Der Status konnte nicht geupdated werden. Möglicherweise liegt dies daran, dass die Nummer nicht in der Datenbank existiert.";
+      } 
+      // else if(statusCodeSales === 200) {
+      //   status = "Der Status wurde erfolgreich in der V&V Datenbank aktualisiert. Bei der Produktionsdatenbank gab es Probleme, möglicherweise liegt dies daran, dass die Nummer nicht in der Datenbank existiert ";
+      // } else if (statusCodeProd === 200){
+      //   status = "Der Status wurde erfolgreich in der Produktionsdatenbank aktualisiert. Bei der V&V Datenbank gab es Probleme.";
+      // }
+      else {
+        status = "Der Status konnte nicht aktualisiert werden. Möglicherweise liegt dies daran, dass die Nummer nicht in der Datenbank existiert.";
       }
     } else {
       status = "Das hat leider nicht geklappt. Dies könnte daran liegen, dass die eingegebene Nummer nicht das korrekte Format hat";

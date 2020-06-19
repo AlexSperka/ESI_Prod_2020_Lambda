@@ -188,7 +188,7 @@ const writeOrdersToDB = function (newOrder, date, time) {
 
   if(typeof newOrder.body.orderNumber !== 'undefined'){
     orderNumber = "\'" + newOrder.body.orderNumber + "\'"
-  } else { orderNumber = null }
+  } else { orderNumber = 'to Stock' }
   
   lineItem = "\'" + newOrder.body.lineItem + "\'"
   articleNumber = +newOrder.body.articleNumber;
