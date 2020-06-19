@@ -66,8 +66,9 @@ exports.handler = async (event, context) => {
 
     let data = JSON.stringify(event);
     data = JSON.parse(data);  /** Unused right now, for later POST implementations when handing over parameters */
+    console.log(data.prodOrderNum)
 
-    await callDB(pool, selectOrdersFromDB()); /** Get 10 entries ordered by date, delta e and prod status */
+    await callDB(pool, selectOrdersFromDB(data.prodOrderNum)); /** Get 10 entries ordered by date, delta e and prod status */
 
     console.log("Test for Empty Response: " + testForEmptyResponse);
 
@@ -128,6 +129,8 @@ async function callDB(client, queryMessage) {
         testForEmptyResponse = JSON.stringify(data)   /** Check if ProdSortNum is empty. If yes then return undefined */
 
         dataDB = queryResult;   /** Save queryResult in global Variable to work with (return doesnt work yet) */
+
+        console.log(dataDB);
         return queryResult; /* https://developer.mozilla.org/de/docs/Web/JavaScript/Guide/Using_promises   */
         //callback(null, results[0]);
         //console.log(results);
@@ -161,7 +164,7 @@ async function callCreateCSV(prodOrderNum) {
 
       console.log("Res.data = " + res.data.body);
       //data = JSON.stringify(res.data)
-      data = JSON.parse(res.data.body);
+      var data = JSON.parse(res.data.body);
       url = data.url
       console.log("URL: " + data.url);
       return data.url;
@@ -176,8 +179,15 @@ async function callSalesUpdateStatus(prodOrderNum) {
   let parsed;
 
   console.log("Called response Create CSV");
+  
+  var postData = {
+    "prodOrderNr":prodOrderNum,
+    "statusID": 2, //ID des Kunden
+    "statusdescription": "Auftrag eingeplant", //String mit Beschreibung
+    
+  }
 
-  axios.post('https://5club7wre8.execute-api.eu-central-1.amazonaws.com/sales/updatestatus', {"prodOrderNr":prodOrderNum})
+  axios.patch('https://5club7wre8.execute-api.eu-central-1.amazonaws.com/sales/updatestatus', postData)
   .then((res) => {
       console.log(res.data)
       var data = JSON.stringify(res.data)
@@ -193,8 +203,22 @@ async function callSalesUpdateStatus(prodOrderNum) {
 }
 
 /********************************* Helper Function GET STUFF FROM DB***********/
-const selectOrdersFromDB = function () {
-  var queryMessage = "SELECT * FROM  esi_prod.ProdTable WHERE prodStatus =" + "'open'" + "ORDER BY endDate, deltaE" + " LIMIT " + ORDERLIMIT;
+const selectOrdersFromDB = function (prodOrderNum) {
+  var queryMessageNum = ' ';
+
+  for (var i = 0; i < prodOrderNum.length; i++) {
+    var obj = prodOrderNum[i];
+    if (i < prodOrderNum.length - 1) {
+      queryMessageNum += "'" + obj + "'" + " , ";
+      callSalesUpdateStatus(obj)
+      //console.log(obj.prodOrderNum);
+    } else {
+      queryMessageNum += "'" + obj + "'";
+    }
+  }
+
+  var queryMessage = "SELECT * FROM  esi_prod.ProdTable WHERE prodOrderNum IN (" + queryMessageNum + ") ORDER BY endDate, deltaE";
+  console.log("Query Message: "+queryMessage);
   return (queryMessage);
 };
 
@@ -208,7 +232,7 @@ async function updateProdStatus () {
     var obj = dataDB[i];
     if (i < dataDB.length - 1) {
       queryMessageNum += "'" + obj.prodOrderNum + "'" + " , ";
-      await callSalesUpdateStatus(obj.prodOrderNum) /** updating all Status in the Sales DB as well */
+      callSalesUpdateStatus(obj.prodOrderNum)
       //console.log(obj.prodOrderNum);
     } else {
       queryMessageNum += "'" + obj.prodOrderNum + "'";
