@@ -76,11 +76,14 @@ exports.handler = async (event, context) => {
 
       await callDBupdateStatus(pool, updateProdStatus(data.prodOrderNum));
 
+      await sleep(500);
+      
       await callSalesUpdateStatus(data.prodOrderNum);
 
       await sleep(500)
 
-      if (statusCodeSales === 200 && statusCodeProd === 200) {
+      //if (statusCodeSales === 200 && statusCodeProd === 200) {  /** Status of Sales sometimes not responding? */
+      if (statusCodeProd === 200) {
         status = "Der Status wurde erfolgreich in der Datenbank aktualisiert.";
       } 
       // else if(statusCodeSales === 200) {
