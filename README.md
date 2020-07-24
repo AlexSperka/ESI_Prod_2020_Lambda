@@ -2,7 +2,7 @@
 
 This project deals with the digitalisation and automation of a fictitious medium-sized production company and has the goal to improve processes and transparency for the customer (company).
 
-This repository is meant for a clean versioning and development of several lambda functions.
+This repository is meant for a clean versioning and development of several lambda functions. The repository is not meant for the direct deployment of your lambda functions, you have to install dependencies first and setup your lambda functions, please see instructions below.
 
 ## Getting Started
 
