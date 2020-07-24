@@ -186,9 +186,9 @@ async function getMaxValue(client) {
 /********************************* Creating Order String for SQL***************/
 const writeOrdersToDB = function (newOrder, date, time) {
 
-  if(typeof newOrder.body.orderNumber !== 'undefined'){
+  if(typeof newOrder.body.orderNumber !== 'undefined' && newOrder.body.orderNumber !== null ){
     orderNumber = "\'" + newOrder.body.orderNumber + "\'"
-  } else { orderNumber = 'to Stock' }
+  } else { orderNumber = "\'"+'Auf Lager'+"\'" }
   
   lineItem = "\'" + newOrder.body.lineItem + "\'"
   articleNumber = +newOrder.body.articleNumber;
