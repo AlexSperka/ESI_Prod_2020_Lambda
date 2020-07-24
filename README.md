@@ -4,6 +4,17 @@ This project deals with the digitalisation and automation of a fictitious medium
 
 This repository is meant for a clean versioning and development of several lambda functions. The repository is not meant for the direct deployment of your lambda functions, you have to install dependencies first and setup your lambda functions, please see instructions below.
 
+## Lambda Function
+| Function | Description  |
+| ------- | --- |
+| addQualityValue | Is called by production frontend via API Gateway and retrives quality values of delivered material from material department (call their REST API) |
+| createCSV | Called by backend sortOrders lambda function via API Gateway, gets orders sorted by color and exports them to CSV file in S3-Bucket. Returns URL |
+| createOrders | Is called by sales departement frontend, adds new order (and suborders) to production database, returns new production order number for identification |
+| orderRessources | Prototype function for later implementation, waiting for connection to material departement (not available yet) |
+| readOrderInfo | As POST and GET, gets called by material departement or production frontend. Depending on the input parameters returns all orders in database, filtered orders by production status or one specific order by prodOrderNum |
+| sortOrders | Gets called by production frontend via API Gateway, input parameters are prodOrderNumbers which user wants to export to CSV. Data from Database for these numbers is extraced and lambda function createCSV gets called. Returns S3 Bucket URL for download. |
+| updateProdStatus | Is called by several functions each time an order finishes one production step and should be updated to next stage. |
+
 ## Getting Started
 
 These instructions will get you a copy of the project up and running on your local machine for development and testing purposes. See deployment for notes on how to deploy the project on a live system.
