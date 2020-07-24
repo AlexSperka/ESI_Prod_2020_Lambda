@@ -1,13 +1,12 @@
 /**
  * Function to get Quality Values from MAWI API and forward it to Prod Frontend
- * @author Alex Sp
- * @date 2020-06-17
+ * 
  * @alias    esi_prod_addQualityValue
  * @memberof ProductionTeamESI
- * 
+ * *
  * @param none, Charge Number
  *
- * @return {Object} Return Quality Values from Mawi
+ * @return {String} Return Quality Values from Mawi
  */
 
 /********************************* Librarys ***********************************/
@@ -23,13 +22,22 @@ exports.handler = async (event) => {
     let data = JSON.stringify(event);
     data = JSON.parse(data);
 
-    chargesNum = data.chargesNum;
+    chargesNum = parseInt( data.chargesNum );
 
     try {
 
         await getQualityValues(event);
-
+        
+        var responseID = JSON.stringify(result)
+        responseID = JSON.parse(responseID)
+        console.log("Result: "+ responseID.idcharges)
+        
+        if(responseID.idcharges === chargesNum)
+        {
         return result;
+        } else {
+            return 'Die Charge mit der ID = ' + chargesNum + ' existiert nicht.'
+        }
         //return { "url": data };
 
     } catch (error) {
@@ -48,8 +56,9 @@ async function getQualityValues(data) {
     await axios.get('https://423rw0hwdj.execute-api.eu-central-1.amazonaws.com/Prod/charges/' + chargesNum.toString())
         .then((res) => {
 
-            console.log(res.data);
             result = res.data
+            console.log(res.data);
+
             return data;
         })
         .catch((error) => {
