@@ -33,14 +33,15 @@ Depending on how comfortable you are using command line tools and interfaces her
 - Alternative2: You can as well setup a lambda function in the AWS console directly ( https://eu-central-1.console.aws.amazon.com/lambda/home?region=eu-central-1#/functions ), give it the role you are comfortable with and setup the environment variables. Afterwards you can take all the files in your lambda directory (index, package, nodemodules, ...), ZIP them and upload them to your lambda function manually.
 
 ## Environment Variables in Lambda Function
-Make sure to exchange the values with the ones of your database before adding them to the lambda function!
-
-  Key                   Value (Example)
-  RDS_DATABASE	        production
-  RDS_LAMBDA_HOSTNAME	  DBNAME.abcdefghij.eu-central-1.rds.amazonaws.com
-  RDS_LAMBDA_PASSWORD	  ThisIsYourPW!
-  RDS_LAMBDA_PORT	      3306
-  RDS_LAMBDA_USERNAME	  root
+Make sure to exchange the values with the ones of your RDS database hosted on AWS before adding them to the lambda function!                
+  
+| Key | Value (Example)  |
+| ------- | --- |
+| RDS_DATABASE | production |
+| RDS_LAMBDA_HOSTNAME | DBNAME.abcdefghij.eu-central-1.rds.amazonaws.com |
+| RDS_LAMBDA_PASSWORD | ThisIsYourPW! |
+| RDS_LAMBDA_PORT | 3306 |
+| RDS_LAMBDA_USERNAME | root |
 
 ## Running the tests
 
