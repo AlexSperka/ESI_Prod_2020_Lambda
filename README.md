@@ -48,6 +48,8 @@ Next step will be to setup and configure the REST API Gateway on AWS to get acce
 - Add the Functions you see in the "Lambda Function"-Section (keep an eye on the methods, GET, POST), you can use the same names if you would like. Then connect the corresponding lambda function to the api call. If done correctly, you now should be able to call the function with a tool like swagger.
 - Alternatively, you can import the API from the swagger.yaml file and then connect the lambda functions to the API.
 
+Last step will be to setup the frontend, exchange the base URL of the API Gateway and test it out! More detail on this you can find in the ESI_PROD_2020_REACT.
+
 ## Environment Variables in Lambda Function
 Make sure to exchange the values with the ones of your RDS database hosted on AWS before adding them to the lambda function!                
   
