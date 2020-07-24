@@ -51,7 +51,7 @@ var quantity = 0;
 var hasPrint = 0;
 var motiveNumber = 0;
 var prodStatus = "\'" + 'open' + "\'";
-var splitOrders = "\'" + 'False' + "\'"; 
+var splitOrders = "\'" + 'False' + "\'";
 
 var colorCyan = 0;
 var colorMagenta = 0;
@@ -85,13 +85,13 @@ const sleep = ms => {
 /********************************* Export Handler *****************************/
 exports.handler = async (event, context, callback) => {
 
-  const pool = await mysql.createPool(settings)
+  const pool = await mysql.createPool(settings)           /** Establish shareable pool connection to database */
 
   time = "\'" + moment().format('HH:mm:ss') + "\'";       /** get UTC Time */
   date = "\'" + moment().format('YYYY:MM:DD') + "\'";
-  endDate = "\'" + moment(moment(date, "YYYY:MM:DD").add(3, 'days')).format('YYYY:MM:DD') + "\'"; /** Enddate promised to customer */
-  
-  console.log("date & time UTC: " + time + " and " + date + ' and Enddate: '+endDate);
+  endDate = "\'" + moment(moment(date, "YYYY:MM:DD").add(3, 'days')).format('YYYY:MM:DD') + "\'"; /** Calculate Enddate promised to customer */
+
+  console.log("date & time UTC: " + time + " and " + date + ' and Enddate: ' + endDate);
   console.log('Received event:', JSON.stringify(event, null, 2));
 
   try {
@@ -104,23 +104,23 @@ exports.handler = async (event, context, callback) => {
     await getMaxValue(pool)                               /** Getting highest (last) prodOrderNum from the Database */
     await sleep(100)
 
-    if(maxProdOrderNum > 0){ 
+    if (maxProdOrderNum > 0) {
       await callDB(pool, writeOrdersToDB(newOrder, date, time)); /** Getting input from lambda call, parsing it */
     } else {
       await sleep(100)
       await getMaxValue(pool)                             /** Hotfix for production, just start DB query again when not a valid number is returned */
-      
-      if(maxProdOrderNum > 0){
+
+      if (maxProdOrderNum > 0) {
         await callDB(pool, writeOrdersToDB(newOrder, date, time));
       }
-      else{
+      else {
         response = {
           statusCode: 400,
           body: {
             "prodOrderNum": "Da hat etwas mit der Produktionsauftragsnummer nicht geklappt. Bitte versuchen Sie es erneut!",
           }
         };
-      return response;
+        return response;
       }
     }
 
@@ -171,8 +171,8 @@ async function getMaxValue(client) {
       var data = results[0];
       data = data[0];
       data = JSON.stringify(data.prodOrderNum);
-      
-      if(maxProdOrderNum === null) {
+
+      if (maxProdOrderNum === null) {
         maxProdOrderNum = -1;
       } else {
         maxProdOrderNum = parseInt(data, 10);
@@ -186,10 +186,10 @@ async function getMaxValue(client) {
 /********************************* Creating Order String for SQL***************/
 const writeOrdersToDB = function (newOrder, date, time) {
 
-  if(typeof newOrder.body.orderNumber !== 'undefined' && newOrder.body.orderNumber !== null ){
+  if (typeof newOrder.body.orderNumber !== 'undefined' && newOrder.body.orderNumber !== null) {
     orderNumber = "\'" + newOrder.body.orderNumber + "\'"
-  } else { orderNumber = "\'"+'Auf Lager'+"\'" }
-  
+  } else { orderNumber = "\'" + 'Auf Lager' + "\'" }
+
   lineItem = "\'" + newOrder.body.lineItem + "\'"
   articleNumber = +newOrder.body.articleNumber;
   color = "\'" + newOrder.body.color + "\'";
@@ -201,7 +201,7 @@ const writeOrdersToDB = function (newOrder, date, time) {
 
   productionOrderNumber = parseInt(maxProdOrderNum) + 1;
 
-  let newOrderString = "INSERT INTO esi_prod.ProdTable values(" + date + "," + time + "," + endDate + "," + orderNumber+ "," +  lineItem + "," + productionOrderNumber + "," + articleNumber + "," + color + "," + colorName + "," + quantity + "," + hasPrint + "," + motiveNumber + "," + prodStatus + "," + splitOrders + "," + colorCyan + "," + colorMagenta + "," + colorYellow + "," + colorKey + "," + deltaE + ")";
+  let newOrderString = "INSERT INTO esi_prod.ProdTable values(" + date + "," + time + "," + endDate + "," + orderNumber + "," + lineItem + "," + productionOrderNumber + "," + articleNumber + "," + color + "," + colorName + "," + quantity + "," + hasPrint + "," + motiveNumber + "," + prodStatus + "," + splitOrders + "," + colorCyan + "," + colorMagenta + "," + colorYellow + "," + colorKey + "," + deltaE + ")";
   console.log(newOrderString);
   return (newOrderString);
 };
