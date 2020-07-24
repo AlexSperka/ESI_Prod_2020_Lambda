@@ -1,120 +1,80 @@
-/********************************* Librarys ***********************************/
+///////////////////////////////////// IMPORTS ///////////////////////////////////////
 
 const mysql = require('mysql2/promise');
 var config = require('./config');
-var moment = require("moment-timezone");
-const axios = require('axios');
 
+///////////////////////////////////// GLOBALS ///////////////////////////////////////
 
-/********************************* Variables **********************************/
-var res = ''; /** Response of the DB call */
+var res = '';
 
-
- var date= moment().format('YYYY-MM-DD');
- var date2 =  moment().format('YYYYMMDD');
- 
- let prodOrderNr;
- let orderNr;
- let j; let c;
- let hasPrint;
-/********************************* SQL Connection *****************************/
+///////////////////////////////////// DATABASE CONNECTION ///////////////////////////////////////
 
 const con = {
-   host: config.host,
-    user: config.user,
-    password: config.password,
-    port: config.port,
-    connectionLimit: 2
+  host: config.host,
+  user: config.user,
+  password: config.password,
+  port: config.port,
+  connectionLimit: 2
 };
 
-const sleep = ms => {
-  return new Promise(resolve => {
-      setTimeout(resolve, ms)
-  })
-}
+/////////////////////////////////////EXPORTS HANDLER///////////////////////////////////////
 
-
-/******************************************************************************/
-/********************************* Export Handler *****************************/
 exports.handler = async (event, context, callback) => {
-const pool = await mysql.createPool(con)
-  let orderNr=event.orderNr; 
+  const pool = await mysql.createPool(con);
+  let orderNr = event.orderNr;
 
-  
   try {
-   
+
+    //get the prodOrderNr, lineItem, articleNr, colorCode, quantity and price of a given orderNr 
     await callDB(pool, getOrderDetails(orderNr));
-    let orderDetails= res;
+    let orderDetails = res;
     JSON.stringify(orderDetails);
-   
-   
 
-    var newProd ="newProd";
-    var lack="lack";
-    var newValue1=null;
-    var newValue2="";
-    
-  
-   let i;
-    for (i in orderDetails) {   
-    orderDetails[i][newProd]=newValue1;
-     orderDetails[i][lack]=newValue2;
-      
-    } 
-
-
-
-    
     const response = {
       statusCode: 200,
       orderDetails
-      
-      
     };
 
     return response;
-    
-
-  } 
-    catch (error) {
-    console.log(error);
-    return { "status": "That did not work" };
-  } finally {
-    await pool.end()
   }
+  catch (error) {
+    console.log(error);
+    return {
+      statusCode: 400,
+      "Error": "Function catched an error"
+    };
+  }
+  finally 
+  {
+    await pool.end();
+  }
+};
 
-}
+/////////////////////////////////////Call DB and parsing answer ///////////////////////////////////////
 
-
-
-
-/********************************* Database Call ******************************/
-async function callDB (client, queryMessage) {
+async function callDB(client, queryMessage) {
 
   var queryResult;
-
   await client.query(queryMessage)
     .then(
       (results) => {
         queryResult = results[0];
         //console.log(results[0]);
-        return queryResult; 
+        return queryResult;
       })
     .then(
       (results) => {
-        
-         res = JSON.parse(JSON.stringify(results));
-        
-      
-        return results
+        res = JSON.parse(JSON.stringify(results));
+        return results;
       })
-    .catch(console.log)
-
+    .catch(console.log);
 }
 
-/********************************* Helper Function SELECT Order FROM DB***********/
+/////////////////////////////////////SQL Querys ///////////////////////////////////////
+
 const getOrderDetails = function (orderNr) {
-  var queryMessage = "SELECT prodOrderNr, lineItem, articleNr, colorCode, quantity, price  FROM esi_sales.orderdetails where orderNr='" +  orderNr+  "';"
+  var queryMessage = "SELECT od.prodOrderNr, od.lineItem, od.articleNr, od.colorCode, od.quantity, od.price FROM esi_sales.orderdetails od NATURAL LEFT JOIN  esi_Resales.retour r WHERE r.prodOrderNr IS NULL and od.orderNr='" + orderNr + "';";
   //console.log(queryMessage);
   return (queryMessage);
 };
+

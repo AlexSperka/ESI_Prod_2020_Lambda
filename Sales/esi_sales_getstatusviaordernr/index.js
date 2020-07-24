@@ -1,101 +1,78 @@
-/********************************* Librarys ***********************************/
+///////////////////////////////////// IMPORTS ///////////////////////////////////////
 
 const mysql = require('mysql2/promise');
 var config = require('./config');
 
+///////////////////////////////////// GLOBALS ///////////////////////////////////////
 
-/********************************* Variables **********************************/
-var res; /** Response of the DB call */
-var results=[];
+var res;
 
-/********************************* SQL Connection *****************************/
+///////////////////////////////////// DATABASE CONNECTION ///////////////////////////////////////
 
 const con = {
-    host: config.host,
-    user: config.user,
-    password: config.password,
-    port: config.port,
+  host: config.host,
+  user: config.user,
+  password: config.password,
+  port: config.port,
 };
 
+/////////////////////////////////////EXPORTS HANDLER///////////////////////////////////////
 
-
-
-/******************************************************************************/
-/********************************* Export Handler *****************************/
 exports.handler = async (event, context, callback) => {
-  
+  const pool = await mysql.createPool(con);
 
-
-const pool = await mysql.createPool(con)
-
-let orderNr=event.orderNr;
+  let orderNr = event.orderNr;
 
   try {
-    
-    //GET OLD ORDERINFOS
-     await callDB(pool, getStatusViaOrderNr(orderNr));
-        results=res;
-      console.log(results)
-    //console.log(orderdetailsRetour)
-    
-  
-    
-    const response = {
-    
-      statusCode: 200,
-      body: results
 
+    //get the status of a given orderNr
+    await callDB(pool, getstatusvo(orderNr));
+    var answer = res;
+    const response = {
+      statusCode: 200,
+      answer
     };
 
     console.log(response);
     return response;
-    
-
-  } 
-    catch (error) {
-    console.log(error);
-    return { "status": "That did not work" };
-  } finally {
-    await pool.end()
   }
 
+  catch (error) {
+    console.log(error);
+    return {
+      statusCode: 400,
+      "Error": "Function catched an error"
+    };
+  }
+  finally {
+    await pool.end()
+  }
 }
 
+/////////////////////////////////////Call DB without response ///////////////////////////////////////
 
+async function callDB(client, queryMessage) {
 
-
-/********************************* Database Call ******************************/
-async function callDB (client, queryMessage) {
-
-  var queryResult = 0;
-
+  var queryResult;
   await client.query(queryMessage)
     .then(
       (results) => {
         queryResult = results[0];
-        return queryResult; 
-
+        //console.log(results[0]);
+        return queryResult;
       })
     .then(
       (results) => {
-        
-    
-        //console.log(JSON.parse(JSON.stringify(results)));
-         res = JSON.parse(JSON.stringify(results));
-        
-        //console.log(res);
+        res = JSON.parse(JSON.stringify(results));
         return results
       })
     .catch(console.log)
+}
 
-};
+/////////////////////////////////////SQL Querys ///////////////////////////////////////
 
-/********************************* Helper Function SELECT Order FROM DB***********/
-
-
-const getStatusViaOrderNr = function (orderNr) {
-  var queryMessage = "SELECT * from esi_sales.status where orderNr='" +  orderNr + "';" ;
-  //console.log(queryMessage)
+const getstatusvo = function (orderNr) {
+  var queryMessage = "SELECT s.prodOrderNr, s.statusID, s.Statusdescription, od.colorCode, od.motivNr, od.materialNr, od.quantity from esi_sales.status s, esi_sales.orderdetails od where od.prodOrderNr=s.prodOrderNr and s.orderNr='" + orderNr + "';";
+  console.log(queryMessage);
   return (queryMessage);
 };
-
