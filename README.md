@@ -7,13 +7,13 @@ This repository is meant for a clean versioning and development of several lambd
 ## Lambda Function
 | Function | Description  |
 | ------- | --- |
-| addQualityValue | Is called by production frontend via API Gateway and retrives quality values of delivered material from material department (call their REST API) |
-| createCSV | Called by backend sortOrders lambda function via API Gateway, gets orders sorted by color and exports them to CSV file in S3-Bucket. Returns URL |
-| createOrders | Is called by sales departement frontend, adds new order (and suborders) to production database, returns new production order number for identification |
-| orderRessources | Prototype function for later implementation, waiting for connection to material departement (not available yet) |
-| readOrderInfo | As POST and GET, gets called by material departement or production frontend. Depending on the input parameters returns all orders in database, filtered orders by production status or one specific order by prodOrderNum |
-| sortOrders | Gets called by production frontend via API Gateway, input parameters are prodOrderNumbers which user wants to export to CSV. Data from Database for these numbers is extraced and lambda function createCSV gets called. Returns S3 Bucket URL for download. |
-| updateProdStatus | Is called by several functions each time an order finishes one production step and should be updated to next stage. |
+| addQualityValue (POST) | Is called by production frontend via API Gateway and retrives quality values of delivered material from material department (call their REST API) |
+| createCSV (POST) | Called by backend sortOrders lambda function via API Gateway, gets orders sorted by color and exports them to CSV file in S3-Bucket. Returns URL |
+| createOrders (POST) | Is called by sales departement frontend, adds new order (and suborders) to production database, returns new production order number for identification |
+| orderRessources (POST) | Prototype function for later implementation, waiting for connection to material departement (not available yet) |
+| readOrderInfo (GET & POST)| Gets called by material departement or production frontend. Depending on the input parameters returns all orders in database, filtered orders by production status or one specific order by prodOrderNum |
+| sortOrders (POST) | Gets called by production frontend via API Gateway, input parameters are prodOrderNumbers which user wants to export to CSV. Data from Database for these numbers is extraced and lambda function createCSV gets called. Returns S3 Bucket URL for download. |
+| updateProdStatus (POST) | Is called by several functions each time an order finishes one production step and should be updated to next stage. |
 
 ## Getting Started
 
@@ -42,6 +42,11 @@ Repeat these steps for every lambda function you would like to setup in the AWS 
 Depending on how comfortable you are using command line tools and interfaces here are two ways of setting up your lambda functions:
 - Alternative 1: To publish your code on the lambda instance you can configure your AWS CLI to update it directly from your editor (Visual Studio Code). See AWS and serverless documentation for help. Make sure to add the environment variables.
 - Alternative2: You can as well setup a lambda function in the AWS console directly ( https://eu-central-1.console.aws.amazon.com/lambda/home?region=eu-central-1#/functions ), give it the role you are comfortable with and setup the environment variables. Afterwards you can take all the files in your lambda directory (index, package, nodemodules, ...), ZIP them and upload them to your lambda function manually.
+
+Next step will be to setup and configure the REST API Gateway on AWS to get access to your lambda functions. Repeat this for each lambda function.
+- See the tutorial for first steps https://docs.aws.amazon.com/apigateway/latest/developerguide/apigateway-getting-started-with-rest-apis.html
+- Add the Functions you see in the "Lambda Function"-Section (keep an eye on the methods, GET, POST), you can use the same names if you would like. Then connect the corresponding lambda function to the api call. If done correctly, you now should be able to call the function with a tool like swagger.
+- Alternatively, you can import the API from the swagger.yaml file and then connect the lambda functions to the API.
 
 ## Environment Variables in Lambda Function
 Make sure to exchange the values with the ones of your RDS database hosted on AWS before adding them to the lambda function!                
