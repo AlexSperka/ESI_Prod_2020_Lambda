@@ -1,8 +1,8 @@
 var config = {};
 
-config.host = 'esidb.coikcqnmxcba.eu-central-1.rds.amazonaws.com';
+config.host = 'DBNAME.abcdefghij.eu-central-1.rds.amazonaws.com';
 config.user = 'root';
-config.password = 'b%F]IFifu<ZyKenDA0l';
+config.password = 'password';
 config.port = '3306';
 
 
