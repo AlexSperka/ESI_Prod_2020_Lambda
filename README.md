@@ -63,7 +63,7 @@ Make sure to exchange the values with the ones of your RDS database hosted on AW
 
 ## Running the tests
 
-As soon as the lambda function you setup is up and running you can do tests with it, either locally or in the AWS console. You can find the json objects for the tests in the corresponding folder of the lambda function named "test.json". This way you can check if the response of your function is correct.
+As soon as the lambda function you setup is up and running you can do tests with it, either locally or in the AWS console. You can find the json objects for the tests in the corresponding folder "Production/TestCases", the text files with the objects are named after the lambda functions. This way you can check if the response of your function is correct.
 
 ## Versioning
 
