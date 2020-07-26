@@ -108,12 +108,10 @@ exports.handler = async (event, context, callback) => {
       await callDB(pool, writeOrdersToDB(newOrder, date, time)); /** Getting input from lambda call, parsing it */
     } else {
       await sleep(100)
-      await getMaxValue(pool)                             /** Hotfix for production, just start DB query again when not a valid number is returned */
 
       if (maxProdOrderNum > 0) {
         await callDB(pool, writeOrdersToDB(newOrder, date, time));
-      }
-      else {
+      } else {
         response = {
           statusCode: 400,
           body: {

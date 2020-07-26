@@ -1,0 +1,12 @@
+{
+  "body": {
+    "orderNumber": null,
+    "lineItem": 1,
+    "articleNumber": "20000001",
+    "color": "#F123DA",
+    "colorName": "",
+    "quantity": 2,
+    "hasPrint": true,
+    "motiveNumber": 4111
+  }
+}
